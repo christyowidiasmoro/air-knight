@@ -71,14 +71,37 @@ Development teams need automated testing and quality checks that run before any 
 
 ---
 
-### Edge Cases
+### Edge Cases & Resilience Testing
 
-- What happens when Docker registry is unavailable during Android builds?
-- How does the system handle concurrent builds for the same branch?
-- What occurs when GitHub API rate limits are reached during release automation?
-- How does the system respond when build artifacts exceed storage quotas?
-- What happens when upload keys expire during Android builds?
-- How does the system handle network timeouts during dependency installations?
+**EC-001: Docker Registry Unavailability**
+- **Scenario**: Docker Hub or container registry is unavailable during Android builds
+- **Expected Behavior**: Build fails gracefully with clear error message, retry mechanism with exponential backoff (3 attempts), fallback to cached images when possible
+- **Acceptance Criteria**: Build logs indicate registry issue, automatic retry attempted, developers notified of infrastructure problem
+
+**EC-002: Concurrent Build Management**  
+- **Scenario**: Multiple builds triggered simultaneously for the same branch
+- **Expected Behavior**: GitHub Actions queues builds appropriately, each build gets isolated environment, no resource conflicts occur
+- **Acceptance Criteria**: All builds complete successfully or fail independently, no cross-contamination of artifacts, clear build ordering in logs
+
+**EC-003: GitHub API Rate Limiting**
+- **Scenario**: Release automation hits GitHub API rate limits
+- **Expected Behavior**: Workflow waits for rate limit reset, implements exponential backoff, provides clear status updates
+- **Acceptance Criteria**: Release eventually completes when limits reset, users informed of delay, no data loss occurs
+
+**EC-004: Storage Quota Exceeded**
+- **Scenario**: Build artifacts exceed GitHub storage quotas
+- **Expected Behavior**: Automatic cleanup of old artifacts triggered, builds continue with reduced retention, administrators notified
+- **Acceptance Criteria**: Storage within limits after cleanup, critical artifacts preserved, clear notification of cleanup actions
+
+**EC-005: Expired Upload Keys**
+- **Scenario**: Android upload keys expire during build process
+- **Expected Behavior**: Build fails with clear security error, key rotation instructions provided, no unsigned artifacts produced
+- **Acceptance Criteria**: Security integrity maintained, clear error messaging, documentation links provided for key renewal
+
+**EC-006: Network Timeout During Dependencies**
+- **Scenario**: Network timeouts occur during npm install or dependency download
+- **Expected Behavior**: Retry with exponential backoff, use cached dependencies when available, fail with diagnostic information
+- **Acceptance Criteria**: Build succeeds on retry when network recovers, cache utilization logged, timeout thresholds documented
 
 ## Requirements *(mandatory)*
 
@@ -88,14 +111,13 @@ Development teams need automated testing and quality checks that run before any 
 - **FR-002**: System MUST generate web application artifacts that are deployable to static hosting platforms (GitHub Pages, Netlify, Vercel)
 - **FR-003**: System MUST build Android applications using Capacitor framework within Docker containers
 - **FR-004**: System MUST run automated tests and quality checks before any deployment, including minimum 80% code coverage, zero linting errors, performance budget compliance, and security vulnerability scans
-- **FR-005**: System MUST store build artifacts securely with proper versioning, retaining latest 10 builds per branch with automatic size-based cleanup
+- **FR-005**: System MUST store build artifacts securely with proper versioning, retaining latest 10 builds per branch with automatic size-based cleanup and temporary build resource management to prevent storage bloat
 - **FR-006**: System MUST send email notifications to commit authors when builds succeed or fail
 - **FR-007**: System MUST support manual triggering of builds and releases through GitHub interface
 - **FR-008**: System MUST generate release notes automatically from commit history and pull requests
 - **FR-009**: System MUST handle secrets and upload keys securely without exposing them in logs, using Google Play App Signing with upload key delegation
 - **FR-010**: System MUST support different deployment environments (development, staging, production)
-- **FR-011**: System MUST clean up temporary build resources and maintain artifact retention limits (latest 10 builds per branch) to prevent storage bloat
-- **FR-012**: System MUST provide detailed build logs and debugging information when failures occur
+- **FR-011**: System MUST provide detailed build logs and debugging information when failures occur
 
 ### Key Entities
 

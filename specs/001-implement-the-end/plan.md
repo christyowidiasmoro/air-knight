@@ -12,10 +12,10 @@ Primary requirement: Implement automated CI/CD pipeline using GitHub Actions for
 ## Technical Context
 
 **Language/Version**: TypeScript 5.0+ (from existing project), JavaScript/Node.js for build scripts  
-**Primary Dependencies**: Vite 4.0+ (build system), CapacitorJS 5.0+ (mobile), GitHub Actions (CI/CD), NEEDS CLARIFICATION - Static hosting provider selection  
-**Storage**: Build artifacts in GitHub releases, temporary build cache, NEEDS CLARIFICATION - Artifact retention strategy details  
-**Testing**: Jest with TypeScript support (existing), NEEDS CLARIFICATION - Integration testing for CI/CD pipeline  
-**Target Platform**: GitHub Actions runners (Ubuntu/Linux), Web browsers (static hosting), NEEDS CLARIFICATION - Specific deployment targets  
+**Primary Dependencies**: Vite 4.0+ (build system), CapacitorJS 5.0+ (mobile), GitHub Actions (CI/CD), GitHub Pages (static hosting)  
+**Storage**: Build artifacts in GitHub releases, GitHub Actions artifact retention (90 days), latest 10 builds per branch with automated cleanup  
+**Testing**: Jest with TypeScript support (existing), Multi-stage GitHub Actions workflow with environment promotion  
+**Target Platform**: GitHub Actions runners (Ubuntu/Linux), Web browsers (GitHub Pages), custom domains supported  
 **Project Type**: Web + mobile (existing Capacitor setup) with CI/CD automation  
 **Performance Goals**: Web builds complete in <5 minutes, 99% build success rate, <1 minute notification delivery  
 **Constraints**: GitHub Actions runner limits, artifact storage quotas, email notification rate limits  
