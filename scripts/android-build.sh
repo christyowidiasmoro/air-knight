@@ -10,14 +10,25 @@ echo "🚀 Starting Android build process..."
 echo "📋 Environment Check:"
 echo "  Node.js: $(node --version)"
 echo "  NPM: $(npm --version)"
-echo "  Capacitor: $(npx cap --version)"
-echo "  Gradle: $(gradle --version | head -1)"
 echo "  Java: $(java -version 2>&1 | head -1)"
 echo "  Android Home: $ANDROID_HOME"
+
+# Check Capacitor after npm install
+echo "  Capacitor CLI: Will check after npm install"
 
 # Install dependencies
 echo "📦 Installing Node.js dependencies..."
 npm ci --prefer-offline --no-audit
+
+# Verify Capacitor installation
+echo "🔍 Verifying Capacitor installation..."
+CAP_VERSION=$(npx --no-install cap --version 2>/dev/null)
+if [ $? -eq 0 ]; then
+    echo "  Capacitor CLI: $CAP_VERSION"
+else
+    echo "❌ Capacitor CLI not working properly"
+    exit 1
+fi
 
 # Type check
 echo "🔍 Running TypeScript type check..."
@@ -25,6 +36,8 @@ npm run type-check
 
 # Build web assets
 echo "🏗️ Building web assets..."
+# Ensure we use root path for Android (clear any GitHub Pages base path)
+unset VITE_BASE_PATH
 npm run build
 
 # Verify web build exists
@@ -39,7 +52,7 @@ echo "✅ Web build completed successfully"
 echo "🔍 Checking Capacitor Android platform..."
 if [ ! -d "android" ]; then
     echo "📱 Android platform not found, adding it..."
-    npx cap add android
+    npx --no-install cap add android
     if [ $? -ne 0 ]; then
         echo "❌ Failed to add Android platform"
         exit 1
@@ -58,7 +71,7 @@ fi
 
 # Sync Capacitor (this copies web assets and updates native project)
 echo "🔄 Syncing Capacitor..."
-npx cap sync android --force
+npx --no-install cap sync android
 if [ $? -ne 0 ]; then
     echo "❌ Capacitor sync failed"
     exit 1

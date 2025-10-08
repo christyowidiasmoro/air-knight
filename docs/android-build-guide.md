@@ -102,11 +102,24 @@ The Android build workflow runs on:
 
 1. **Quality Gate**: Runs type checking, linting, and tests
 2. **Docker Setup**: Builds Android build environment image
-3. **Web Build**: Creates Vite production build
+3. **Web Build**: Creates Vite production build with root paths (clears `VITE_BASE_PATH`)
 4. **Capacitor Sync**: Syncs web assets to Android project
 5. **Android Build**: Compiles APK using Gradle
 6. **Artifact Upload**: Stores APK and metadata
 7. **Analysis**: Validates APK size and build performance
+
+### Important: Base Path Handling
+
+The Android build automatically clears the `VITE_BASE_PATH` environment variable to ensure the web build uses root paths (`/assets/...`) instead of GitHub Pages subdirectory paths (`/repository-name/assets/...`). This is crucial because:
+
+- **Android apps** serve files from the local device filesystem
+- **Capacitor** expects assets at root paths within the app bundle
+- **GitHub Pages** requires subdirectory paths for repository deployments
+
+The build script handles this automatically, but if building manually:
+```bash
+unset VITE_BASE_PATH && npm run build && npx cap sync android
+```
 
 ## Performance Targets
 

@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js dependencies globally (as root)
-RUN npm install -g @capacitor/core @capacitor/cli @capacitor/android
+# Install Node.js dependencies globally (as root) - only basic tools needed
+# Note: Capacitor CLI will be used from local node_modules for version consistency
 
 # Switch back to circleci user
 USER circleci

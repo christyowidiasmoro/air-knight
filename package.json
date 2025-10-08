@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:github-pages": "export VITE_BASE_PATH=/air-knight/ && npm run build",
+    "build:local": "export VITE_BASE_PATH=/ && npm run build",
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -13,7 +15,7 @@
     "lint:fix": "eslint src --ext ts,tsx --fix",
     "type-check": "tsc --noEmit",
     "analyze": "npm run build && npx vite-bundle-analyzer dist/",
-    "mobile:build": "npm run build && npx cap sync",
+    "mobile:build": "unset VITE_BASE_PATH && npm run build && npx cap sync",
     "mobile:setup": "npx cap add android && npx cap add ios",
     "mobile:ios": "npx cap open ios",
     "mobile:android": "npx cap open android",

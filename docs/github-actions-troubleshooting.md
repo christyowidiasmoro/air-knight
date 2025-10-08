@@ -1,6 +1,35 @@
 # GitHub Actions Troubleshooting Guide
 
-## Common Issues and Solutions
+### 4. GitHub Pages Deployment Issues
+
+**Error**: Assets not loading on GitHub Pages (404 errors for JS/CSS files)
+
+**Common Causes**:
+- Incorrect base path configuration
+- Assets generated with absolute paths instead of subdirectory paths
+- Missing pages permissions
+- Pages not enabled in repository
+
+**Solutions**:
+```yaml
+# In workflow file
+env:
+  VITE_BASE_PATH: ${{ github.ref == 'refs/heads/main' && '/repository-name/' || '/' }}
+```
+
+```typescript
+// In vite.config.ts
+export default defineConfig({
+  base: process.env.VITE_BASE_PATH || '/',
+  // ... other config
+});
+```
+
+**Verification**:
+- Check generated `dist/index.html` for correct script paths
+- Test locally: `npm run build:github-pages && npx vite preview --base /repository-name/`
+
+### 5. Android Build Environment Setup# Common Issues and Solutions
 
 ### 1. Permission Denied Error for PR Comments
 
