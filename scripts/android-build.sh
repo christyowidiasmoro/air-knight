@@ -35,13 +35,39 @@ fi
 
 echo "✅ Web build completed successfully"
 
-# Sync Capacitor
-echo "🔄 Syncing Capacitor..."
-npx cap sync android
-
-# Verify Android project exists
+# Check if Android platform is added to Capacitor
+echo "🔍 Checking Capacitor Android platform..."
 if [ ! -d "android" ]; then
-    echo "❌ Android project not found"
+    echo "📱 Android platform not found, adding it..."
+    npx cap add android
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to add Android platform"
+        exit 1
+    fi
+    echo "✅ Android platform added successfully"
+else
+    echo "✅ Android platform already exists"
+fi
+
+# Ensure capacitor.config.json is properly configured
+echo "🔧 Verifying Capacitor configuration..."
+if [ ! -f "capacitor.config.json" ]; then
+    echo "❌ capacitor.config.json not found"
+    exit 1
+fi
+
+# Sync Capacitor (this copies web assets and updates native project)
+echo "🔄 Syncing Capacitor..."
+npx cap sync android --force
+if [ $? -ne 0 ]; then
+    echo "❌ Capacitor sync failed"
+    exit 1
+fi
+echo "✅ Capacitor sync completed successfully"
+
+# Verify Android project exists and has required files after sync
+if [ ! -d "android" ] || [ ! -f "android/app/build.gradle" ]; then
+    echo "❌ Android project not properly configured after sync"
     exit 1
 fi
 

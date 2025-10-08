@@ -8,9 +8,28 @@ This guide explains how to configure the Android build system for the Air Knight
 
 Before using the Android build workflow, ensure you have:
 
-1. **Android Project Setup**: The Capacitor Android project should be initialized
+1. **Android Project Setup**: The Capacitor Android project configuration files are tracked in git
 2. **Repository Secrets**: Required secrets for release builds (see below)
 3. **GitHub Actions**: Enabled in your repository
+
+### Android Project Structure
+
+The repository tracks essential Android configuration files but ignores generated content:
+
+**Tracked Files** (in git):
+- `android/app/build.gradle` - Build configuration
+- `android/app/src/main/AndroidManifest.xml` - App manifest
+- `android/gradle.properties` - Gradle properties
+- `android/settings.gradle` - Project settings
+- Other configuration and source files
+
+**Ignored Files** (not in git):
+- `android/.gradle/` - Gradle cache
+- `android/app/build/` - Build outputs
+- `android/.idea/` - IDE files
+- `android/app/src/main/assets/public/` - Generated web assets
+
+This approach ensures CI/CD can recreate the Android project while keeping the repository clean.
 
 ## Repository Secrets Configuration
 
@@ -129,22 +148,30 @@ The workflow generates these artifacts:
 
 ### Common Issues
 
-1. **Build Timeout**
+1. **"android platform has not been added yet" Error**
+   - **Cause**: Android platform files missing or not properly synced
+   - **Solution**: The build script automatically handles this by:
+     - Checking if `android/` directory exists
+     - Running `npx cap add android` if needed
+     - Running `npx cap sync android --force` to ensure proper setup
+   - **Manual Fix**: Run `npx cap add android` locally and commit the changes
+
+2. **Build Timeout**
    - Check if dependencies are cached properly
    - Verify Docker image builds successfully
    - Review Gradle memory settings
 
-2. **Signing Failures**
+3. **Signing Failures**
    - Verify all secrets are set correctly
    - Check keystore base64 encoding
    - Ensure passwords match keystore configuration
 
-3. **APK Not Generated**
+4. **APK Not Generated**
    - Check web build completion
    - Verify Capacitor sync successful
    - Review Android project structure
 
-4. **Size Issues**
+5. **Size Issues**
    - Monitor bundle analysis reports
    - Check for unnecessary dependencies
    - Optimize asset compression

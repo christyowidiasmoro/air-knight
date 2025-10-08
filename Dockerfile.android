@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js dependencies globally (as root)
-RUN npm install -g @capacitor/core @capacitor/cli
+RUN npm install -g @capacitor/core @capacitor/cli @capacitor/android
 
 # Switch back to circleci user
 USER circleci
