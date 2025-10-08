@@ -138,25 +138,25 @@
 **Story Goal**: Implement automated Android builds using Capacitor in Docker environment  
 **Independent Test**: Trigger Android build workflow that produces signed APK ready for distribution
 
-### T017 Create Docker build image
+### T017 Create Docker build image ✅
 **File**: `.github/workflows/android-build.yml` + `Dockerfile.android`  
 **Story**: US2  
 **Description**: Create Dockerfile for Android build environment with Capacitor support  
 **Acceptance**: Docker image contains Android SDK, Capacitor CLI, build tools
 
-### T018 Create Android build workflow
+### T018 Create Android build workflow ✅
 **File**: `.github/workflows/android-build.yml`  
 **Story**: US2  
 **Description**: Create workflow for Android builds using Docker container  
 **Acceptance**: Workflow builds APK in Docker, handles Capacitor sync, stores artifacts
 
-### T019 [P] Configure Android signing
+### T019 [P] Configure Android signing ✅
 **File**: `.github/workflows/android-build.yml` + repository secrets  
 **Story**: US2  
 **Description**: Set up Android app signing with upload keys  
 **Acceptance**: APK signed with upload key, ready for Play Store upload
 
-### T020 [P] Set up APK artifact storage
+### T020 [P] Set up APK artifact storage ✅
 **File**: `.github/workflows/android-build.yml`  
 **Story**: US2  
 **Description**: Configure APK artifact upload and retention  

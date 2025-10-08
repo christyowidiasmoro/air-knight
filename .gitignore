@@ -34,9 +34,14 @@ Thumbs.db
 .Trashes
 ehthumbs.db
 
-# Capacitor
+# Capacitor - Keep essential files, ignore generated content
 ios/
-android/
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/build/
 capacitor.config.ts
 
 # Capacitor Plugins

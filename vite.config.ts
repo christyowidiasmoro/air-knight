@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  // Set base path for GitHub Pages deployment only when explicitly set
+  // Android builds should always use root path for local filesystem
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [],
   resolve: {
     alias: {
