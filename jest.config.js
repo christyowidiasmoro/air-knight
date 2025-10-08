@@ -13,9 +13,12 @@ module.exports = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/main.ts',
-    '!src/**/*.test.{ts,tsx}'
+    '!src/**/*.test.{ts,tsx}',
+    '!src/**/__tests__/**'
   ],
-  moduleNameMapping: {
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
   setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],

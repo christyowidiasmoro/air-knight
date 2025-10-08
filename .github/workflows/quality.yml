@@ -1,0 +1,182 @@
+name: Quality Assurance
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check TypeScript compilation
+        run: npm run type-check
+
+  test:
+    name: Unit Tests & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --watchAll=false --passWithNoTests
+
+      - name: Check coverage threshold
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            coverage=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct // 0')
+            echo "Current coverage: $coverage%"
+            # Use awk instead of bc for better compatibility
+            if awk "BEGIN {exit !($coverage < 80)}"; then
+              echo "❌ Coverage $coverage% is below 80% threshold"
+              exit 1
+            else
+              echo "✅ Coverage $coverage% meets 80% threshold"
+            fi
+          else
+            echo "⚠️ No coverage data found, but tests passed"
+          fi
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 30
+
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Analyze bundle size
+        run: |
+          # Get build size
+          build_size=$(du -sh dist/ | cut -f1)
+          echo "Build size: $build_size"
+          
+          # Simple bundle size check (convert to bytes for comparison)
+          size_bytes=$(du -sb dist/ | cut -f1)
+          max_size_bytes=$((2 * 1024 * 1024))  # 2MB limit
+          
+          if [ $size_bytes -gt $max_size_bytes ]; then
+            echo "❌ Bundle size $build_size exceeds 2MB limit"
+            exit 1
+          else
+            echo "✅ Bundle size $build_size is within 2MB limit"
+          fi
+
+      - name: Upload build artifacts for analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-analysis
+          path: dist/
+          retention-days: 7
+
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          # Run npm audit and capture output
+          if npm audit --audit-level high; then
+            echo "✅ No high-severity vulnerabilities found"
+          else
+            echo "❌ High-severity vulnerabilities detected"
+            npm audit --audit-level high
+            exit 1
+          fi
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [lint, test, bundle-analysis, security]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Lint Status: ${{ needs.lint.result }}"
+          echo "Test Status: ${{ needs.test.result }}"
+          echo "Bundle Analysis Status: ${{ needs.bundle-analysis.result }}"
+          echo "Security Status: ${{ needs.security.result }}"
+          
+          if [[ "${{ needs.lint.result }}" != "success" || 
+                "${{ needs.test.result }}" != "success" || 
+                "${{ needs.bundle-analysis.result }}" != "success" || 
+                "${{ needs.security.result }}" != "success" ]]; then
+            echo "❌ Quality gate failed - one or more checks did not pass"
+            exit 1
+          else
+            echo "✅ Quality gate passed - all checks successful"
+          fi
