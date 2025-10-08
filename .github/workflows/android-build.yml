@@ -86,6 +86,8 @@ jobs:
       apk-generated: ${{ steps.build-check.outputs.apk-generated }}
       apk-size: ${{ steps.build-check.outputs.apk-size }}
       build-duration: ${{ steps.build-check.outputs.build-duration }}
+      build-type: ${{ steps.metadata.outputs.build-type }}
+      commit-sha: ${{ steps.metadata.outputs.commit-sha }}
       
     steps:
       - name: Checkout code
@@ -209,6 +211,16 @@ jobs:
           retention-days: 30
           compression-level: 6
           
+      - name: Debug artifact info
+        if: steps.build-check.outputs.apk-generated == 'true'
+        run: |
+          echo "📦 Artifact Details:"
+          echo "  Name: android-apk-${{ steps.metadata.outputs.build-type }}-${{ steps.metadata.outputs.commit-sha }}"
+          echo "  Build Type: ${{ steps.metadata.outputs.build-type }}"
+          echo "  Commit SHA: ${{ steps.metadata.outputs.commit-sha }}"
+          echo "  Files to upload:"
+          ls -la build-output/
+          
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -231,8 +243,22 @@ jobs:
       - name: Download APK artifact
         uses: actions/download-artifact@v4
         with:
-          name: android-apk-${{ needs.android-build.outputs.build-type }}-${{ github.sha }}
+          name: android-apk-${{ needs.android-build.outputs.build-type }}-${{ needs.android-build.outputs.commit-sha }}
           path: ./apk-analysis
+          
+      - name: Verify APK download
+        run: |
+          echo "🔍 Verifying APK download..."
+          echo "  Expected artifact: android-apk-${{ needs.android-build.outputs.build-type }}-${{ needs.android-build.outputs.commit-sha }}"
+          echo "  Downloaded files:"
+          ls -la ./apk-analysis/
+          
+          APK_COUNT=$(find apk-analysis -name "*.apk" | wc -l)
+          if [ $APK_COUNT -eq 0 ]; then
+            echo "❌ No APK files found in downloaded artifact"
+            exit 1
+          fi
+          echo "✅ Found $APK_COUNT APK file(s)"
           
       - name: Analyze APK
         run: |
@@ -240,13 +266,25 @@ jobs:
           
           APK_FILE=$(find apk-analysis -name "*.apk" | head -1)
           
-          # Basic APK information
+          # Validate APK file exists
+          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
+            echo "❌ No valid APK file found for analysis"
+            exit 1
+          fi
+          
           echo "📱 APK Analysis Results:"
-          echo "  Size: ${{ needs.android-build.outputs.apk-size }}"
+          echo "  File: $(basename "$APK_FILE")"
+          echo "  Size from build: ${{ needs.android-build.outputs.apk-size }}"
           echo "  Build Duration: ${{ needs.android-build.outputs.build-duration }}s"
+          echo "  Build Type: ${{ needs.android-build.outputs.build-type }}"
+          
+          # Get actual file size for validation
+          APK_SIZE_BYTES=$(stat -c%s "$APK_FILE")
+          APK_SIZE_MB=$((APK_SIZE_BYTES / 1024 / 1024))
+          
+          echo "  Actual Size: ${APK_SIZE_MB}MB (${APK_SIZE_BYTES} bytes)"
           
           # Size validation
-          APK_SIZE_BYTES=$(stat -c%s "$APK_FILE")
           MAX_SIZE_BYTES=$((100 * 1024 * 1024))  # 100MB limit
           
           if [ $APK_SIZE_BYTES -gt $MAX_SIZE_BYTES ]; then
@@ -263,6 +301,54 @@ jobs:
             echo "⚠️ Build duration (${BUILD_DURATION}s) exceeds 15-minute target"
           else
             echo "✅ Build completed within 15-minute target"
+          fi
+          
+          # Additional APK information
+          echo ""
+          echo "📊 Additional APK Details:"
+          
+          # Check if build metadata exists
+          if [ -f "apk-analysis/build-metadata.json" ]; then
+            echo "  Build Metadata Available:"
+            echo "    Build Time: $(grep -o '"build_time":"[^"]*"' apk-analysis/build-metadata.json | cut -d'"' -f4)"
+            echo "    Capacitor Version: $(grep -o '"capacitor_version":"[^"]*"' apk-analysis/build-metadata.json | cut -d'"' -f4)"
+            echo "    App Version: $(grep -o '"app_version":"[^"]*"' apk-analysis/build-metadata.json | cut -d'"' -f4)"
+            CHECKSUM=$(grep -o '"apk_checksum":"[^"]*"' apk-analysis/build-metadata.json | cut -d'"' -f4)
+            echo "    Checksum: ${CHECKSUM:0:16}..."
+          else
+            echo "  No build metadata found"
+          fi
+          
+      - name: Create APK Analysis Summary
+        run: |
+          echo "## 📱 Android APK Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          APK_FILE=$(find apk-analysis -name "*.apk" | head -1)
+          APK_SIZE_BYTES=$(stat -c%s "$APK_FILE")
+          APK_SIZE_MB=$((APK_SIZE_BYTES / 1024 / 1024))
+          
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **APK File** | \`$(basename "$APK_FILE")\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Size** | ${APK_SIZE_MB}MB (${APK_SIZE_BYTES} bytes) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Duration** | ${{ needs.android-build.outputs.build-duration }}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Type** | ${{ needs.android-build.outputs.build-type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ needs.android-build.outputs.commit-sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Status indicators
+          if [ $APK_SIZE_BYTES -le $((100 * 1024 * 1024)) ]; then
+            echo "✅ **Size Check**: Within 100MB limit" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Size Check**: Exceeds 100MB limit" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          BUILD_DURATION="${{ needs.android-build.outputs.build-duration }}"
+          if [ $BUILD_DURATION -le 900 ]; then
+            echo "✅ **Performance**: Build completed within 15-minute target" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Performance**: Build exceeded 15-minute target" >> $GITHUB_STEP_SUMMARY
           fi
 
   # Notification on completion
