@@ -1,0 +1,294 @@
+name: Android Build
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+      upload_artifact:
+        description: 'Upload APK artifact'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  # Build configuration
+  NODE_VERSION: '18'
+  JAVA_VERSION: '17'
+  DOCKER_IMAGE: 'android-build-env'
+  
+  # Capacitor configuration
+  CAPACITOR_ANDROID_GRADLE_VERSION: '8.2.1'
+  
+  # Build optimization
+  GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2'
+
+jobs:
+  # Quality gate - Android builds depend on passing quality checks
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    outputs:
+      quality-passed: ${{ steps.quality-check.outputs.passed }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+        
+      - name: Run quality checks
+        id: quality-check
+        run: |
+          echo "Running essential quality checks for Android build..."
+          
+          # Type checking
+          echo "🔍 Type checking..."
+          npm run type-check
+          
+          # Linting
+          echo "🧹 Linting..."
+          npm run lint
+          
+          # Unit tests
+          echo "🧪 Running tests..."
+          npm test -- --passWithNoTests
+          
+          echo "✅ Quality checks passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  android-build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: needs.quality-gate.outputs.quality-passed == 'true'
+    
+    timeout-minutes: 30
+    
+    outputs:
+      apk-generated: ${{ steps.build-check.outputs.apk-generated }}
+      apk-size: ${{ steps.build-check.outputs.apk-size }}
+      build-duration: ${{ steps.build-check.outputs.build-duration }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Set up build metadata
+        id: metadata
+        run: |
+          echo "build-time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "commit-sha=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+          echo "branch-name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          
+          # Determine build type
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            BUILD_TYPE="release"
+          else
+            BUILD_TYPE="debug"
+          fi
+          
+          echo "build-type=${BUILD_TYPE}" >> $GITHUB_OUTPUT
+          echo "🏗️ Building Android APK (${BUILD_TYPE} mode)"
+          
+      - name: Build Docker image
+        run: |
+          echo "🐳 Building Android build environment..."
+          docker build -t ${{ env.DOCKER_IMAGE }} -f Dockerfile.android .
+          
+      - name: Prepare build environment
+        run: |
+          # Create directories for Docker volumes
+          mkdir -p ${{ github.workspace }}/build-output
+          mkdir -p ${{ github.workspace }}/gradle-cache
+          
+          # Set permissions for Docker container
+          chmod 777 ${{ github.workspace }}/build-output
+          chmod 777 ${{ github.workspace }}/gradle-cache
+          
+      - name: Build Android APK in Docker
+        id: android-build
+        env:
+          # Signing configuration (for release builds)
+          ANDROID_SIGNING_KEY_BASE64: ${{ secrets.ANDROID_SIGNING_KEY_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          BUILD_TYPE: ${{ steps.metadata.outputs.build-type }}
+        run: |
+          echo "🚀 Starting Android build in Docker container..."
+          
+          # Record build start time
+          BUILD_START=$(date +%s)
+          
+          # Run build in Docker container
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -v ${{ github.workspace }}/gradle-cache:/home/circleci/.gradle \
+            -w /workspace \
+            -e ANDROID_SIGNING_KEY_BASE64 \
+            -e ANDROID_KEYSTORE_PASSWORD \
+            -e ANDROID_KEY_ALIAS \
+            -e ANDROID_KEY_PASSWORD \
+            -e BUILD_TYPE \
+            -e GRADLE_OPTS="${{ env.GRADLE_OPTS }}" \
+            ${{ env.DOCKER_IMAGE }} \
+            bash scripts/android-build.sh
+            
+          # Calculate build duration
+          BUILD_END=$(date +%s)
+          BUILD_DURATION=$((BUILD_END - BUILD_START))
+          
+          echo "build-duration=${BUILD_DURATION}" >> $GITHUB_OUTPUT
+          echo "⏱️ Build completed in ${BUILD_DURATION} seconds"
+          
+      - name: Verify build output
+        id: build-check
+        run: |
+          echo "🔍 Verifying build output..."
+          
+          # Check if APK was generated
+          APK_COUNT=$(find build-output -name "*.apk" | wc -l)
+          
+          if [ $APK_COUNT -eq 0 ]; then
+            echo "❌ No APK files found in build output"
+            echo "apk-generated=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "✅ Found $APK_COUNT APK file(s)"
+          echo "apk-generated=true" >> $GITHUB_OUTPUT
+          
+          # Get APK details
+          APK_FILE=$(find build-output -name "*.apk" | head -1)
+          APK_SIZE=$(du -h "$APK_FILE" | cut -f1)
+          APK_SIZE_BYTES=$(stat -c%s "$APK_FILE")
+          
+          echo "apk-size=${APK_SIZE}" >> $GITHUB_OUTPUT
+          echo "apk-size-bytes=${APK_SIZE_BYTES}" >> $GITHUB_OUTPUT
+          
+          echo "📦 APK Details:"
+          echo "  File: $(basename "$APK_FILE")"
+          echo "  Size: ${APK_SIZE} (${APK_SIZE_BYTES} bytes)"
+          
+          # Display build metadata if available
+          if [ -f "build-output/build-metadata.json" ]; then
+            echo "📊 Build Metadata:"
+            cat build-output/build-metadata.json | jq .
+          fi
+          
+      - name: Upload APK artifact
+        if: steps.build-check.outputs.apk-generated == 'true' && (github.event.inputs.upload_artifact != 'false')
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ steps.metadata.outputs.build-type }}-${{ steps.metadata.outputs.commit-sha }}
+          path: |
+            build-output/*.apk
+            build-output/build-metadata.json
+          retention-days: 30
+          compression-level: 6
+          
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-logs-${{ steps.metadata.outputs.commit-sha }}
+          path: |
+            android/app/build/outputs/logs/
+            build-output/build-metadata.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Performance and size analysis
+  build-analysis:
+    name: Build Analysis
+    runs-on: ubuntu-latest
+    needs: android-build
+    if: needs.android-build.outputs.apk-generated == 'true'
+    
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk-${{ needs.android-build.outputs.build-type }}-${{ github.sha }}
+          path: ./apk-analysis
+          
+      - name: Analyze APK
+        run: |
+          echo "🔍 Analyzing APK..."
+          
+          APK_FILE=$(find apk-analysis -name "*.apk" | head -1)
+          
+          # Basic APK information
+          echo "📱 APK Analysis Results:"
+          echo "  Size: ${{ needs.android-build.outputs.apk-size }}"
+          echo "  Build Duration: ${{ needs.android-build.outputs.build-duration }}s"
+          
+          # Size validation
+          APK_SIZE_BYTES=$(stat -c%s "$APK_FILE")
+          MAX_SIZE_BYTES=$((100 * 1024 * 1024))  # 100MB limit
+          
+          if [ $APK_SIZE_BYTES -gt $MAX_SIZE_BYTES ]; then
+            echo "⚠️ APK size (${APK_SIZE_BYTES} bytes) exceeds 100MB limit"
+          else
+            echo "✅ APK size within acceptable limits"
+          fi
+          
+          # Performance check
+          BUILD_DURATION="${{ needs.android-build.outputs.build-duration }}"
+          MAX_DURATION=900  # 15 minutes
+          
+          if [ $BUILD_DURATION -gt $MAX_DURATION ]; then
+            echo "⚠️ Build duration (${BUILD_DURATION}s) exceeds 15-minute target"
+          else
+            echo "✅ Build completed within 15-minute target"
+          fi
+
+  # Notification on completion
+  notify:
+    name: Build Notification
+    runs-on: ubuntu-latest
+    needs: [android-build, build-analysis]
+    if: always() && (needs.android-build.result == 'success' || needs.android-build.result == 'failure')
+    
+    steps:
+      - name: Send notification
+        run: |
+          if [[ "${{ needs.android-build.result }}" == "success" ]]; then
+            echo "✅ Android build completed successfully!"
+            echo "📱 APK generated: ${{ needs.android-build.outputs.apk-generated }}"
+            echo "📦 APK size: ${{ needs.android-build.outputs.apk-size }}"
+            echo "⏱️ Build duration: ${{ needs.android-build.outputs.build-duration }}s"
+          else
+            echo "❌ Android build failed!"
+            echo "Please check the build logs for details."
+          fi
+          
+          # Future: Add email notification or Slack webhook here
+          # Example placeholder for email notification:
+          # curl -X POST "https://api.emailservice.com/send" \
+          #   -H "Authorization: Bearer $EMAIL_API_KEY" \
+          #   -d "to=$COMMIT_AUTHOR_EMAIL" \
+          #   -d "subject=Android Build ${{ needs.android-build.result }}" \
+          #   -d "body=Build completed with status: ${{ needs.android-build.result }}"
