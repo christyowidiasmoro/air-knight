@@ -43,11 +43,10 @@ RUN sdkmanager --update && \
     "extras;android;m2repository" \
     "extras;google;m2repository"
 
-# Verify installation
+# Verify base installation (Capacitor will be verified after npm install in build script)
 RUN java -version && \
     node --version && \
     npm --version && \
-    npx cap --version && \
     gradle --version
 
 # Set up build directory structure

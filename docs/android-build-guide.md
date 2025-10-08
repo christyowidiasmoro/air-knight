@@ -98,15 +98,32 @@ The Android build workflow runs on:
    - Build type selection (debug/release)
    - Artifact upload toggle
 
+## Docker Build Environment
+
+The Android build uses a custom Docker image (`Dockerfile.android`) that includes:
+
+### Base System Components
+- **Operating System**: Ubuntu with CircleCI user
+- **Java**: OpenJDK 17 (required for Android builds)
+- **Node.js**: Version 20.x (for web build and package management)
+- **Android SDK**: Platform tools, build tools, and required API levels
+- **Gradle**: Build system for Android projects
+
+### Project-Specific Components (installed during build)
+- **Capacitor CLI**: Installed from project's package.json for version consistency
+- **Project Dependencies**: All npm packages from package.json
+- **Web Assets**: Built using Vite and synced to Android project
+
 ## Build Process
 
 1. **Quality Gate**: Runs type checking, linting, and tests
-2. **Docker Setup**: Builds Android build environment image
-3. **Web Build**: Creates Vite production build with root paths (clears `VITE_BASE_PATH`)
-4. **Capacitor Sync**: Syncs web assets to Android project
-5. **Android Build**: Compiles APK using Gradle
-6. **Artifact Upload**: Stores APK and metadata
-7. **Analysis**: Validates APK size and build performance
+2. **Docker Setup**: Builds Android build environment image with base tools
+3. **Dependency Installation**: Installs project dependencies including Capacitor CLI
+4. **Web Build**: Creates Vite production build with root paths (clears `VITE_BASE_PATH`)
+5. **Capacitor Sync**: Syncs web assets to Android project using local CLI
+6. **Android Build**: Compiles APK using Gradle
+7. **Artifact Upload**: Stores APK and metadata
+8. **Analysis**: Validates APK size and build performance
 
 ### Important: Base Path Handling
 
@@ -120,6 +137,12 @@ The build script handles this automatically, but if building manually:
 ```bash
 unset VITE_BASE_PATH && npm run build && npx cap sync android
 ```
+
+### Why Local Capacitor CLI?
+The Docker image doesn't include Capacitor CLI globally because:
+- **Version Consistency**: Uses exact version from package.json
+- **Dependency Management**: Avoids version conflicts between global and local
+- **Project Isolation**: Each build uses its own Capacitor version
 
 ## Performance Targets
 
