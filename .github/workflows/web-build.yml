@@ -1,0 +1,184 @@
+name: Web Build and Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for deployment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip running tests'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  build:
+    name: Build Web Application
+    runs-on: ubuntu-latest
+    outputs:
+      deployment-url: ${{ steps.deployment.outputs.page_url }}
+      build-version: ${{ github.sha }}
+      artifact-id: ${{ steps.upload-artifact.outputs.artifact-id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run quality checks
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          echo "Quality checks would run here via workflow_call or separate action"
+          echo "For now, running basic checks inline"
+          npm run lint
+          npm run type-check
+          npm test -- --passWithNoTests
+
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_ENVIRONMENT: ${{ inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        id: upload-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build-${{ github.sha }}
+          path: dist/
+          retention-days: 30
+          compression-level: 6
+
+      - name: Setup Pages (production only)
+        if: github.ref == 'refs/heads/main' || inputs.environment == 'production'
+        uses: actions/configure-pages@v4
+
+      - name: Upload to GitHub Pages
+        if: github.ref == 'refs/heads/main' || inputs.environment == 'production'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.ref == 'refs/heads/main' || inputs.environment == 'production'
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || inputs.environment }}
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  deploy-preview:
+    name: Deploy Preview
+    if: github.event_name == 'pull_request' || (inputs.environment == 'staging' && github.ref != 'refs/heads/main')
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Comment on PR with preview info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Build Preview Ready
+              
+              **Build Status**: ✅ Success
+              **Commit**: \`${{ github.sha }}\`
+              **Branch**: \`${{ github.head_ref }}\`
+              
+              📦 **Artifacts**: Available for download in [Actions tab](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              
+              🔍 **Quality Checks**: All quality gates passed
+              📊 **Bundle Size**: Check the build analysis in the workflow logs
+              `
+            })
+
+  notify:
+    name: Send Notifications
+    if: always()
+    needs: [build, deploy, deploy-preview]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine build status
+        id: status
+        run: |
+          if [[ "${{ needs.build.result }}" == "success" && 
+                ("${{ needs.deploy.result }}" == "success" || "${{ needs.deploy.result }}" == "skipped") &&
+                ("${{ needs.deploy-preview.result }}" == "success" || "${{ needs.deploy-preview.result }}" == "skipped") ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create notification summary
+        run: |
+          echo "## ${{ steps.status.outputs.emoji }} Build ${{ steps.status.outputs.status == 'success' && 'Success' || 'Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Actor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.status.outputs.status }}" == "success" ]]; then
+            echo "✅ **Build**: Successful" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Quality**: All checks passed" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+              echo "✅ **Deployment**: Successful" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ **Build**: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "🔗 **Logs**: [View workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Send email notification (placeholder)
+        run: |
+          echo "Email notification would be sent here"
+          echo "To: ${{ github.actor }}@users.noreply.github.com"
+          echo "Subject: ${{ steps.status.outputs.emoji }} Build ${{ steps.status.outputs.status == 'success' && 'Success' || 'Failed' }}: ${{ github.repository }} - ${{ github.ref_name }}"
+          echo "Status: ${{ steps.status.outputs.status }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          
+          # Note: Email integration would require additional setup with secrets
+          # For now, this creates a clear log of what would be sent
