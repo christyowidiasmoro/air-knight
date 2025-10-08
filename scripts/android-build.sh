@@ -126,28 +126,55 @@ echo "🧹 Cleaning previous builds..."
 echo "🔨 Building Android APK..."
 ./gradlew $BUILD_TYPE --stacktrace --info
 
+# Show all build outputs for debugging
+echo "📋 Build outputs structure:"
+find app/build/outputs -type f -name "*.apk" -o -name "*.aab" 2>/dev/null | head -10
+
 # Verify APK was created
-APK_PATH=""
+echo "🔍 Searching for generated APK files..."
 if [ "$BUILD_TYPE" = "assembleRelease" ]; then
-    APK_PATH="app/build/outputs/apk/release/app-release.apk"
+    APK_DIR="app/build/outputs/apk/release"
+    BUILD_VARIANT="release"
 else
-    APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+    APK_DIR="app/build/outputs/apk/debug"
+    BUILD_VARIANT="debug"
 fi
 
-if [ ! -f "$APK_PATH" ]; then
-    echo "❌ APK build failed - file not found at $APK_PATH"
+# List all APK files in the output directory
+echo "📁 Checking APK directory: $APK_DIR"
+if [ -d "$APK_DIR" ]; then
+    ls -la "$APK_DIR"
+    APK_FILES=$(find "$APK_DIR" -name "*.apk" -type f)
+    
+    if [ -z "$APK_FILES" ]; then
+        echo "❌ No APK files found in $APK_DIR"
+        echo "📋 Available files:"
+        find app/build/outputs -name "*.apk" -type f 2>/dev/null || echo "No APK files found anywhere in build outputs"
+        exit 1
+    fi
+    
+    # Use the first APK found (should typically be only one)
+    APK_PATH=$(echo "$APK_FILES" | head -1)
+    echo "✅ Found APK: $APK_PATH"
+else
+    echo "❌ APK output directory not found: $APK_DIR"
+    echo "📋 Available directories in app/build/outputs:"
+    ls -la app/build/outputs/ 2>/dev/null || echo "No outputs directory found"
     exit 1
 fi
 
 # Copy APK to output directory
 mkdir -p /workspace/build-output
-cp "$APK_PATH" "/workspace/build-output/"
+APK_FILENAME=$(basename "$APK_PATH")
+cp "$APK_PATH" "/workspace/build-output/$APK_FILENAME"
 
 # Get APK info
 APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
 echo "✅ APK built successfully!"
+echo "📦 APK filename: $APK_FILENAME"
 echo "📦 APK size: $APK_SIZE"
 echo "📁 APK location: $APK_PATH"
+echo "📂 Copied to: /workspace/build-output/$APK_FILENAME"
 
 # Calculate checksum
 APK_CHECKSUM=$(sha256sum "$APK_PATH" | cut -d' ' -f1)
@@ -158,10 +185,12 @@ cat > /workspace/build-output/build-metadata.json << EOF
 {
   "build_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "build_type": "$BUILD_TYPE",
+  "build_variant": "$BUILD_VARIANT",
+  "apk_filename": "$APK_FILENAME",
   "apk_size_bytes": $(stat -c%s "$APK_PATH"),
   "apk_size_human": "$APK_SIZE",
   "apk_checksum": "$APK_CHECKSUM",
-  "capacitor_version": "$(npx cap --version)",
+  "capacitor_version": "$(npx --no-install cap --version)",
   "gradle_version": "$(./gradlew --version | grep Gradle | cut -d' ' -f2)",
   "android_compile_sdk": "$(grep compileSdkVersion app/build.gradle | grep -o '[0-9]\+')",
   "app_version": "$(grep versionName app/build.gradle | cut -d'"' -f2)"

@@ -189,8 +189,34 @@ The workflow generates these artifacts:
    - **Solution**: The build script automatically handles this by:
      - Checking if `android/` directory exists
      - Running `npx cap add android` if needed
-     - Running `npx cap sync android --force` to ensure proper setup
+     - Running `npx cap sync android` to ensure proper setup
    - **Manual Fix**: Run `npx cap add android` locally and commit the changes
+
+2. **APK Not Found After Successful Build**
+   - **Cause**: APK generated with different filename or in unexpected location
+   - **Solution**: The build script now searches for any `.apk` files in output directories
+   - **Debug**: Check build logs for "Build outputs structure" section
+   - **Manual Check**: Look in `android/app/build/outputs/apk/` for APK files
+
+3. **Build Timeout**
+   - Check if dependencies are cached properly
+   - Verify Docker image builds successfully
+   - Review Gradle memory settings
+
+4. **Signing Failures**
+   - Verify all secrets are set correctly
+   - Check keystore base64 encoding
+   - Ensure passwords match keystore configuration
+
+5. **APK Not Generated**
+   - Check web build completion
+   - Verify Capacitor sync successful
+   - Review Android project structure
+
+6. **Size Issues**
+   - Monitor bundle analysis reports
+   - Check for unnecessary dependencies
+   - Optimize asset compression
 
 2. **Build Timeout**
    - Check if dependencies are cached properly
