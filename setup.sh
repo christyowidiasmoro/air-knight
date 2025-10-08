@@ -61,8 +61,34 @@ npm run build
 # Setup git hooks (if git is initialized)
 if [ -d ".git" ]; then
     echo "🔗 Setting up git hooks..."
-    echo '#!/bin/sh\nnpm run lint && npm run type-check' > .git/hooks/pre-commit
+    cat > .git/hooks/pre-commit << 'EOF'
+#!/bin/sh
+# Air Knight pre-commit hook
+# Runs linting and type checking before commits
+
+echo "🔍 Running pre-commit checks..."
+
+# Run TypeScript type checking
+echo "📝 Type checking..."
+npm run type-check
+if [ $? -ne 0 ]; then
+    echo "❌ TypeScript type check failed. Please fix errors before committing."
+    exit 1
+fi
+
+# Run linting
+echo "🧹 Linting..."
+npm run lint
+if [ $? -ne 0 ]; then
+    echo "❌ Linting failed. Please fix errors before committing."
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"
+exit 0
+EOF
     chmod +x .git/hooks/pre-commit
+    echo "✅ Pre-commit hook installed"
 fi
 
 echo ""
