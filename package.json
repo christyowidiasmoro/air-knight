@@ -12,6 +12,7 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src --ext ts,tsx --fix",
     "type-check": "tsc --noEmit",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist/",
     "mobile:build": "npm run build && npx cap sync",
     "mobile:setup": "npx cap add android && npx cap add ios",
     "mobile:ios": "npx cap open ios",
