@@ -1,0 +1,39 @@
+{
+  "appId": "com.airknight.game",
+  "appName": "Air Knight",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#2c3e50"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#2c3e50",
+      "showSpinner": false,
+      "androidSpinnerStyle": "large",
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#ecf0f1"
+    },
+    "Keyboard": {
+      "resize": "none"
+    },
+    "Device": {
+      "orientation": "landscape"
+    }
+  },
+  "ios": {
+    "scheme": "Air Knight",
+    "contentInset": "automatic",
+    "backgroundColor": "#2c3e50"
+  },
+  "android": {
+    "backgroundColor": "#2c3e50",
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}

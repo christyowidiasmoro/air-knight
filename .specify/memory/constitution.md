@@ -1,50 +1,73 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: Initial → 1.0.0
+- Added principles: Modular Game Architecture, TypeScript-First Development, Mobile-Optimized Performance, Scene-Based Organization, Cross-Platform Compatibility
+- Added sections: Technology Stack Requirements, Development Workflow
+- Templates requiring updates: ✅ All templates aligned with game development principles
+- Follow-up TODOs: None
+-->
+
+# Air Knight Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Modular Game Architecture
+Every game system MUST be designed as an independent, reusable module with clear interfaces.
+Game systems (rendering, input, audio, physics) MUST be decoupled and communicate through well-defined contracts.
+Each module MUST be testable in isolation and follow single responsibility principle.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**Rationale**: Modular architecture enables better maintainability, testing, and code reuse across different game features.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. TypeScript-First Development (NON-NEGOTIABLE)
+All game code MUST be written in TypeScript with strict type checking enabled.
+Type definitions MUST be comprehensive, avoiding `any` types except for validated external APIs.
+Interfaces MUST define all game entity contracts, component systems, and event structures.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale**: TypeScript provides compile-time safety critical for complex game logic and prevents runtime errors in production.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Mobile-Optimized Performance
+All game features MUST maintain 60 FPS on target mobile devices (iOS 12+, Android API 24+).
+Memory usage MUST NOT exceed 200MB on low-end devices.
+Battery optimization MUST be prioritized through efficient rendering and minimal background processing.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Rationale**: Mobile games require strict performance constraints to provide smooth user experience across diverse hardware.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Scene-Based Organization
+Game functionality MUST be organized into discrete scenes with clear lifecycle management.
+Scene transitions MUST be smooth and handle state persistence appropriately.
+Each scene MUST manage its own resources and cleanup on destruction.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale**: Scene-based architecture provides natural organization for game features and enables efficient memory management.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Cross-Platform Compatibility
+Game code MUST run identically on web browsers and mobile devices via CapacitorJS.
+Platform-specific features MUST be abstracted behind unified interfaces.
+Touch and mouse/keyboard input MUST be handled through a unified input system.
+
+**Rationale**: Cross-platform compatibility maximizes reach while maintaining single codebase simplicity.
+
+## Technology Stack Requirements
+
+**Core Framework**: Phaser 3.70+ with TypeScript 5.0+
+**Mobile Integration**: CapacitorJS 5.0+ for native mobile deployment
+**Build System**: Vite 4.0+ for fast development and optimized production builds
+**Testing**: Jest with TypeScript support for unit tests, Playwright for integration tests
+**Code Quality**: ESLint + Prettier with TypeScript rules
+**Asset Pipeline**: Optimized sprite sheets, compressed audio, efficient texture management
+
+## Development Workflow
+
+**Development Process**: Feature-driven development with component-based architecture
+**Code Review**: All game system changes require performance impact assessment
+**Testing Gates**: Unit tests for game logic, integration tests for scene transitions
+**Performance Validation**: Frame rate profiling required for all visual features
+**Mobile Testing**: Mandatory testing on actual devices before feature completion
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Constitution supersedes all coding practices and architectural decisions.
+All game features must demonstrate compliance with mobile performance requirements.
+Complexity in game systems must be justified with clear performance and maintainability benefits.
+Use project documentation for runtime development guidance and platform-specific considerations.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-10-08 | **Last Amended**: 2025-10-08
