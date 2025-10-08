@@ -20,11 +20,14 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Node.js dependencies globally (as root)
+RUN npm install -g @capacitor/core @capacitor/cli
+
 # Switch back to circleci user
 USER circleci
 
-# Install Node.js dependencies globally
-RUN npm install -g @capacitor/core @capacitor/cli
+# Switch back to circleci user
+USER circleci
 
 # Accept Android SDK licenses
 RUN yes | sdkmanager --licenses || true
