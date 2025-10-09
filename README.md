@@ -118,27 +118,6 @@ export class MyScene {
 }
 ```
 
-### Input Handling
-
-The unified input system provides both touch and keyboard/mouse support:
-
-```typescript
-import { InputSystem } from '@/systems/InputSystem';
-
-// In your scene or game object
-const inputSystem = gameEngine.getSystem<InputSystem>('InputSystem');
-
-// Check input state
-if (inputSystem?.isKeyPressed('space')) {
-  // Handle space key
-}
-
-if (inputSystem?.isTouchActive()) {
-  const touchPos = inputSystem.getTouchPosition();
-  // Handle touch input
-}
-```
-
 ### Performance Guidelines
 
 - Target 60 FPS on mobile devices

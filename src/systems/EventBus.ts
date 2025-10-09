@@ -3,7 +3,17 @@
  * Following Modular Game Architecture principle
  */
 
-import type { EventHandler, EventBus as IEventBus } from '@/types';
+import type { EventHandler } from '../types/GameTypes';
+
+export interface IEventBus {
+  subscribe<T>(event: string, handler: EventHandler<T>): void;
+  once<T>(event: string, handler: EventHandler<T>): void;
+  unsubscribe<T>(event: string, handler: EventHandler<T>): void;
+  emit<T>(event: string, data?: T): void;
+  clear(): void;
+  getListenerCount(event: string): number;
+  getEvents(): string[];
+}
 
 export class EventBus implements IEventBus {
   private listeners = new Map<string, Set<EventHandler>>();
@@ -110,27 +120,3 @@ export class EventBus implements IEventBus {
 
 // Global event bus instance
 export const eventBus = new EventBus();
-
-// Common game events
-export const GAME_EVENTS = {
-  SCENE_CHANGE: 'scene:change',
-  SCENE_READY: 'scene:ready',
-  GAME_START: 'game:start',
-  GAME_PAUSE: 'game:pause',
-  GAME_RESUME: 'game:resume',
-  GAME_OVER: 'game:over',
-  ENTITY_CREATED: 'entity:created',
-  ENTITY_DESTROYED: 'entity:destroyed',
-  INPUT_TOUCH_START: 'input:touch:start',
-  INPUT_TOUCH_END: 'input:touch:end',
-  INPUT_TOUCH_MOVE: 'input:touch:move',
-  INPUT_KEY_DOWN: 'input:key:down',
-  INPUT_KEY_UP: 'input:key:up',
-  ASSET_LOAD_START: 'asset:load:start',
-  ASSET_LOAD_COMPLETE: 'asset:load:complete',
-  ASSET_LOAD_ERROR: 'asset:load:error',
-  PERFORMANCE_WARNING: 'performance:warning',
-  ERROR: 'error',
-} as const;
-
-export type GameEventType = keyof typeof GAME_EVENTS;

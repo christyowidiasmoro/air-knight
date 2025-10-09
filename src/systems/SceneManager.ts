@@ -1,260 +1,285 @@
 /**
- * Scene Manager System - Handles scene lifecycle and transitions
- * Following Scene-Based Organization principle
+ * Air Knight - Scene management system
  */
 
-import type { SceneData, SceneTransition, GameSystem } from '@/types';
-import { eventBus, GAME_EVENTS } from './EventBus';
+import * as Phaser from 'phaser';
+import { eventBus } from './EventBus';
+import { errorHandler } from './ErrorHandler';
+import { EVENTS, SCENE_KEYS } from '../utils/Constants';
+import type { SceneTransition } from '../types/GameTypes';
 
-export interface GameScene {
-  readonly key: string;
-  init?(data: SceneData): void;
-  preload?(): void;
-  create?(): void;
-  update?(time: number, delta: number): void;
-  shutdown?(): void;
-  destroy?(): void;
+export interface SceneManagerConfig {
+  enableTransitions: boolean;
+  transitionDuration: number;
+  preloadNext: boolean;
+  fadeColor: string;
 }
 
-export class SceneManager implements GameSystem {
-  readonly name = 'SceneManager';
-  
-  private scenes = new Map<string, GameScene>();
-  private currentScene: GameScene | null = null;
-  private phaserSceneManager: any = null; // Phaser.Scenes.SceneManager
-  private transitionInProgress = false;
+export interface SceneData {
+  [key: string]: any;
+}
 
-  constructor(phaserSceneManager?: any) {
-    this.phaserSceneManager = phaserSceneManager ?? null;
+export class SceneManager {
+  private game: Phaser.Game;
+  private currentScene: string | null = null;
+  private previousScene: string | null = null;
+  private isTransitioning: boolean = false;
+  private preloadedScenes: Set<string> = new Set();
+
+  private config: SceneManagerConfig = {
+    enableTransitions: true,
+    transitionDuration: 500,
+    preloadNext: false,
+    fadeColor: '#000000',
+  };
+
+  constructor(game: Phaser.Game, config?: Partial<SceneManagerConfig>) {
+    this.game = game;
+
+    if (config) {
+      this.config = { ...this.config, ...config };
+    }
+
+    this.setupSceneEvents();
+    console.log('📋 SceneManager initialized');
   }
 
-  async initialize(): Promise<void> {
-    eventBus.subscribe(GAME_EVENTS.SCENE_CHANGE, this.handleSceneChange.bind(this));
-    console.log('SceneManager initialized');
+  private setupSceneEvents(): void {
+    this.game.events.on('step', this.onGameStep.bind(this));
+    this.game.events.on('ready', this.onGameReady.bind(this));
+
+    eventBus.subscribe(EVENTS.SCENE_TRANSITION_START, this.onTransitionStart.bind(this));
+    eventBus.subscribe(EVENTS.SCENE_TRANSITION_COMPLETE, this.onTransitionComplete.bind(this));
   }
 
-  async shutdown(): Promise<void> {
-    if (this.currentScene) {
-      await this.stopScene(this.currentScene.key);
+  private onGameStep(): void {
+    const activeScenes = this.game.scene.getScenes(true);
+    if (activeScenes.length > 0 && activeScenes[0]) {
+      const newCurrentScene = activeScenes[0].scene.key;
+      if (newCurrentScene !== this.currentScene) {
+        this.previousScene = this.currentScene;
+        this.currentScene = newCurrentScene;
+      }
     }
-    this.scenes.clear();
-    this.currentScene = null;
-    eventBus.unsubscribe(GAME_EVENTS.SCENE_CHANGE, this.handleSceneChange.bind(this));
-    console.log('SceneManager shutdown');
   }
 
-  update(deltaTime: number): void {
-    // Scene-specific updates are handled by Phaser
-    // This method can be used for scene manager specific logic
+  private onGameReady(): void {
+    console.log('🎮 Game ready, SceneManager active');
   }
 
-  /**
-   * Register a scene
-   */
-  addScene(scene: GameScene): void {
-    if (this.scenes.has(scene.key)) {
-      throw new Error(`Scene with key '${scene.key}' already exists`);
-    }
-    
-    this.scenes.set(scene.key, scene);
-    
-    // If using Phaser, register with Phaser's scene manager
-    if (this.phaserSceneManager) {
-      this.phaserSceneManager.add(scene.key, scene);
-    }
-    
-    console.log(`Scene '${scene.key}' registered`);
+  private onTransitionStart(data: any): void {
+    this.isTransitioning = true;
+    console.log('🔄 Scene transition started:', data);
   }
 
-  /**
-   * Remove a scene
-   */
-  removeScene(key: string): void {
-    if (!this.scenes.has(key)) {
-      console.warn(`Scene '${key}' not found`);
-      return;
-    }
-
-    if (this.currentScene?.key === key) {
-      throw new Error(`Cannot remove active scene '${key}'`);
-    }
-
-    const scene = this.scenes.get(key)!;
-    this.scenes.delete(key);
-    
-    // Clean up with Phaser if available
-    if (this.phaserSceneManager) {
-      this.phaserSceneManager.remove(key);
-    }
-    
-    // Call destroy if available
-    if (scene.destroy) {
-      scene.destroy();
-    }
-    
-    console.log(`Scene '${key}' removed`);
+  private onTransitionComplete(data: any): void {
+    this.isTransitioning = false;
+    console.log('✅ Scene transition completed:', data);
   }
 
-  /**
-   * Start a scene
-   */
-  async startScene(key: string, data?: SceneData): Promise<void> {
-    if (this.transitionInProgress) {
-      console.warn('Scene transition already in progress');
-      return;
-    }
-
-    const scene = this.scenes.get(key);
-    if (!scene) {
-      throw new Error(`Scene '${key}' not found`);
-    }
-
-    this.transitionInProgress = true;
-
+  public startScene(sceneKey: string, data?: SceneData): void {
     try {
-      // Stop current scene if exists
-      if (this.currentScene) {
-        await this.stopScene(this.currentScene.key);
+      if (!this.isValidSceneKey(sceneKey)) {
+        console.error(`❌ Invalid scene key: ${sceneKey}`);
+        return;
       }
 
-      // Start new scene
-      this.currentScene = scene;
-      
-      if (this.phaserSceneManager) {
-        this.phaserSceneManager.start(key, data);
+      console.log(`🎬 Starting scene: ${sceneKey}`);
+
+      eventBus.emit(EVENTS.SCENE_TRANSITION_START, {
+        from: this.currentScene,
+        to: sceneKey,
+        timestamp: new Date(),
+        data,
+      });
+
+      this.game.scene.start(sceneKey, data);
+
+      eventBus.emit(EVENTS.SCENE_STARTED, {
+        scene: sceneKey,
+        timestamp: new Date(),
+        data,
+      });
+
+      setTimeout(() => {
+        eventBus.emit(EVENTS.SCENE_TRANSITION_COMPLETE, {
+          from: this.currentScene,
+          to: sceneKey,
+          timestamp: new Date(),
+        });
+      }, this.config.transitionDuration);
+    } catch (error) {
+      errorHandler.handleError(
+        error as Error,
+        {
+          component: 'SceneManager',
+          action: 'start-scene',
+          timestamp: new Date(),
+          additionalData: { sceneKey, data },
+        },
+        false
+      );
+    }
+  }
+
+  public stopScene(sceneKey: string): void {
+    try {
+      if (!this.isValidSceneKey(sceneKey)) {
+        console.error(`❌ Invalid scene key: ${sceneKey}`);
+        return;
+      }
+
+      console.log(`⏹️ Stopping scene: ${sceneKey}`);
+
+      this.game.scene.stop(sceneKey);
+
+      eventBus.emit(EVENTS.SCENE_STOPPED, {
+        scene: sceneKey,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      errorHandler.handleError(
+        error as Error,
+        {
+          component: 'SceneManager',
+          action: 'stop-scene',
+          timestamp: new Date(),
+          additionalData: { sceneKey },
+        },
+        false
+      );
+    }
+  }
+
+  public switchToScene(sceneKey: string, data?: SceneData, transition?: SceneTransition): void {
+    try {
+      if (this.isTransitioning) {
+        console.warn('⚠️ Scene transition already in progress');
+        return;
+      }
+
+      if (!this.isValidSceneKey(sceneKey)) {
+        console.error(`❌ Invalid scene key: ${sceneKey}`);
+        return;
+      }
+
+      console.log(`🔄 Switching to scene: ${sceneKey}`);
+
+      const fromScene = this.currentScene;
+
+      eventBus.emit(EVENTS.SCENE_TRANSITION_START, {
+        from: fromScene,
+        to: sceneKey,
+        transition: transition || 'fade',
+        timestamp: new Date(),
+        data,
+      });
+
+      if (transition && this.config.enableTransitions) {
+        this.performTransition(fromScene, sceneKey, data, transition);
       } else {
-        // Manual scene initialization
-        if (scene.init) {
-          scene.init(data ?? {});
+        if (fromScene) {
+          this.stopScene(fromScene);
         }
-        if (scene.preload) {
-          scene.preload();
-        }
-        if (scene.create) {
-          scene.create();
-        }
+        this.startScene(sceneKey, data);
       }
-
-      eventBus.emit(GAME_EVENTS.SCENE_READY, { sceneKey: key, data });
-      console.log(`Scene '${key}' started`);
-      
-    } finally {
-      this.transitionInProgress = false;
+    } catch (error) {
+      errorHandler.handleError(
+        error as Error,
+        {
+          component: 'SceneManager',
+          action: 'switch-scene',
+          timestamp: new Date(),
+          additionalData: { sceneKey, transition, data },
+        },
+        false
+      );
     }
   }
 
-  /**
-   * Stop a scene
-   */
-  async stopScene(key: string): Promise<void> {
-    const scene = this.scenes.get(key);
-    if (!scene) {
-      console.warn(`Scene '${key}' not found`);
-      return;
-    }
+  private performTransition(
+    fromScene: string | null,
+    toScene: string,
+    data?: SceneData,
+    transition?: SceneTransition
+  ): void {
+    this.isTransitioning = true;
 
-    if (this.phaserSceneManager) {
-      this.phaserSceneManager.stop(key);
-    } else {
-      // Manual scene shutdown
-      if (scene.shutdown) {
-        scene.shutdown();
+    setTimeout(() => {
+      if (fromScene) {
+        this.stopScene(fromScene);
       }
-    }
+      this.startScene(toScene, data);
 
-    if (this.currentScene?.key === key) {
-      this.currentScene = null;
-    }
-
-    console.log(`Scene '${key}' stopped`);
+      setTimeout(() => {
+        this.isTransitioning = false;
+        eventBus.emit(EVENTS.SCENE_TRANSITION_COMPLETE, {
+          from: fromScene,
+          to: toScene,
+          transition: transition || 'fade',
+          timestamp: new Date(),
+        });
+      }, this.config.transitionDuration / 2);
+    }, this.config.transitionDuration / 2);
   }
 
-  /**
-   * Pause a scene
-   */
-  pauseScene(key: string): void {
-    if (!this.scenes.has(key)) {
-      console.warn(`Scene '${key}' not found`);
-      return;
-    }
-
-    if (this.phaserSceneManager) {
-      this.phaserSceneManager.pause(key);
-    }
-
-    console.log(`Scene '${key}' paused`);
-  }
-
-  /**
-   * Resume a scene
-   */
-  resumeScene(key: string): void {
-    if (!this.scenes.has(key)) {
-      console.warn(`Scene '${key}' not found`);
-      return;
-    }
-
-    if (this.phaserSceneManager) {
-      this.phaserSceneManager.resume(key);
-    }
-
-    console.log(`Scene '${key}' resumed`);
-  }
-
-  /**
-   * Get current scene
-   */
-  getCurrentScene(): GameScene | null {
+  public getCurrentScene(): string | null {
     return this.currentScene;
   }
 
-  /**
-   * Get all registered scenes
-   */
-  getScenes(): string[] {
-    return Array.from(this.scenes.keys());
+  public getPreviousScene(): string | null {
+    return this.previousScene;
   }
 
-  /**
-   * Check if scene exists
-   */
-  hasScene(key: string): boolean {
-    return this.scenes.has(key);
+  public isCurrentlyTransitioning(): boolean {
+    return this.isTransitioning;
   }
 
-  /**
-   * Handle scene change events
-   */
-  private handleSceneChange(transition: SceneTransition): void {
-    this.startScene(transition.to, transition.data).catch(error => {
-      console.error('Scene transition failed:', error);
-      eventBus.emit(GAME_EVENTS.ERROR, {
-        code: 'SCENE_TRANSITION_FAILED',
-        message: `Failed to transition from ${transition.from} to ${transition.to}`,
-        error,
-      });
-    });
+  public isSceneActive(sceneKey: string): boolean {
+    return this.game.scene.isActive(sceneKey);
+  }
+
+  private isValidSceneKey(sceneKey: string): boolean {
+    return Object.values(SCENE_KEYS).includes(sceneKey as any);
+  }
+
+  public getStatus(): {
+    currentScene: string | null;
+    previousScene: string | null;
+    isTransitioning: boolean;
+    activeScenes: string[];
+    config: SceneManagerConfig;
+  } {
+    return {
+      currentScene: this.currentScene,
+      previousScene: this.previousScene,
+      isTransitioning: this.isTransitioning,
+      activeScenes: this.game.scene.getScenes(true).map(scene => scene.scene.key),
+      config: { ...this.config },
+    };
+  }
+
+  public updateConfig(config: Partial<SceneManagerConfig>): void {
+    this.config = { ...this.config, ...config };
+    console.log('⚙️ SceneManager configuration updated:', this.config);
+  }
+
+  public destroy(): void {
+    this.game.events.off('step', this.onGameStep.bind(this));
+    this.game.events.off('ready', this.onGameReady.bind(this));
+
+    this.currentScene = null;
+    this.previousScene = null;
+    this.isTransitioning = false;
+    this.preloadedScenes.clear();
+
+    console.log('🧹 SceneManager destroyed');
   }
 }
 
-// Scene transition helper functions
-export const sceneTransitions = {
-  /**
-   * Transition to a new scene
-   */
-  goToScene(to: string, data?: SceneData): void {
-    eventBus.emit(GAME_EVENTS.SCENE_CHANGE, {
-      from: 'current',
-      to,
-      data,
-    } as SceneTransition);
-  },
-
-  /**
-   * Restart current scene
-   */
-  restartScene(data?: SceneData): void {
-    // This would need to be implemented based on current scene tracking
-    console.log('Restart scene requested', data);
-  },
-};
+export function createSceneManager(
+  game: Phaser.Game,
+  config?: Partial<SceneManagerConfig>
+): SceneManager {
+  return new SceneManager(game, config);
+}

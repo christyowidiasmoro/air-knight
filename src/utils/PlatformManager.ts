@@ -1,306 +1,299 @@
 /**
- * Mobile Platform Detection and Optimization
- * Following Cross-Platform Compatibility and Mobile-Optimized Performance principles
+ * Air Knight - Platform and device detection utilities
  */
 
-import type { PlatformCapabilities } from '@/types';
-import { eventBus, GAME_EVENTS } from '@/systems/EventBus';
+import { eventBus } from '../systems/EventBus';
+import { EVENTS } from './Constants';
+import { Platform, DeviceCapabilities, ExtendedDeviceInfo } from '../types/GameTypes';
 
 export class PlatformManager {
-  private capabilities: {
-    isMobile: boolean;
-    hasTouch: boolean;
-    hasVibration: boolean;
-    screenOrientation: 'portrait' | 'landscape';
-    pixelRatio: number;
-  };
+  private static instance: PlatformManager;
+  private deviceInfo: ExtendedDeviceInfo | null = null;
+  private capabilities: DeviceCapabilities | null = null;
 
-  constructor() {
-    this.capabilities = this.detectPlatformCapabilities();
-    this.setupMobileOptimizations();
+  private constructor() {
+    this.detectDevice();
+    this.detectCapabilities();
   }
 
-  /**
-   * Get platform capabilities
-   */
-  getCapabilities(): PlatformCapabilities {
-    return { ...this.capabilities };
+  public static getInstance(): PlatformManager {
+    if (!PlatformManager.instance) {
+      PlatformManager.instance = new PlatformManager();
+    }
+    return PlatformManager.instance;
   }
 
-  /**
-   * Check if running on mobile device
-   */
-  isMobile(): boolean {
-    return this.capabilities.isMobile;
-  }
+  private detectDevice(): void {
+    const userAgent = navigator.userAgent;
+    const platform = navigator.platform;
 
-  /**
-   * Check if device has touch support
-   */
-  hasTouch(): boolean {
-    return this.capabilities.hasTouch;
-  }
+    let detectedPlatform: Platform;
 
-  /**
-   * Get optimal game settings for current platform
-   */
-  getOptimalSettings() {
-    const baseSettings = {
-      antialiasing: false,
-      pixelArt: true,
-      physics: {
-        debug: false,
-        iterations: this.capabilities.isMobile ? 4 : 8,
-      },
-      audio: {
-        volume: 0.7,
-        enableCompression: this.capabilities.isMobile,
-      },
-    };
-
-    if (this.capabilities.isMobile) {
-      return {
-        ...baseSettings,
-        renderQuality: 'medium',
-        particleCount: 50,
-        maxSounds: 5,
-        textureResolution: 1,
-        targetFPS: 60,
-      };
+    if (/iPhone|iPad|iPod/i.test(userAgent)) {
+      detectedPlatform = Platform.IOS;
+    } else if (/Android/i.test(userAgent)) {
+      detectedPlatform = Platform.ANDROID;
+    } else if (/Windows/i.test(platform)) {
+      detectedPlatform = Platform.WINDOWS;
+    } else if (/Mac/i.test(platform)) {
+      detectedPlatform = Platform.MACOS;
+    } else if (/Linux/i.test(platform)) {
+      detectedPlatform = Platform.LINUX;
+    } else {
+      detectedPlatform = Platform.UNKNOWN;
     }
 
-    return {
-      ...baseSettings,
-      renderQuality: 'high',
-      particleCount: 200,
-      maxSounds: 10,
-      textureResolution: 2,
-      targetFPS: 60,
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isTablet = /iPad|Android(?=.*Tablet)|Tablet/i.test(userAgent);
+    const isDesktop = !isMobile && !isTablet;
+
+    const screenWidth = window.screen.width;
+    const screenHeight = window.screen.height;
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    const isChrome = /Chrome/i.test(userAgent);
+    const isSafari = /Safari/i.test(userAgent) && !isChrome;
+    const isFirefox = /Firefox/i.test(userAgent);
+    const isEdge = /Edge/i.test(userAgent);
+
+    const isPortrait = screenHeight > screenWidth;
+    const isLandscape = !isPortrait;
+
+    this.deviceInfo = {
+      // ExtendedDeviceInfo properties
+      platform: detectedPlatform,
+      isMobile,
+      isTablet,
+      isDesktop,
+      screenWidth,
+      screenHeight,
+      pixelRatio,
+      isPortrait,
+      isLandscape,
+      userAgent,
+      browser: { isChrome, isSafari, isFirefox, isEdge },
+      osVersion: this.extractOSVersion(userAgent),
+
+      // DeviceInfo base properties
+      type: isMobile ? ('mobile' as any) : isTablet ? ('tablet' as any) : ('desktop' as any),
+      orientation: isPortrait ? ('portrait' as any) : ('landscape' as any),
+      screenSize: { width: screenWidth, height: screenHeight },
+      touchSupported: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
     };
+
+    console.log('📱 Device detected:', this.deviceInfo);
   }
 
-  private detectPlatformCapabilities(): PlatformCapabilities {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+  private extractOSVersion(userAgent: string): string {
+    let version = 'Unknown';
+
+    const iosMatch = userAgent.match(/OS (\d+_\d+)/);
+    if (iosMatch && iosMatch[1]) {
+      version = iosMatch[1].replace('_', '.');
+    }
+
+    const androidMatch = userAgent.match(/Android (\d+\.?\d*)/);
+    if (androidMatch && androidMatch[1]) {
+      version = androidMatch[1];
+    }
+
+    const windowsMatch = userAgent.match(/Windows NT (\d+\.\d+)/);
+    if (windowsMatch && windowsMatch[1]) {
+      version = windowsMatch[1];
+    }
+
+    return version;
+  }
+
+  private detectCapabilities(): void {
     const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const hasAudioContext = !!(window.AudioContext || (window as any).webkitAudioContext);
+    const hasWebAudio = hasAudioContext;
+
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    const hasWebGL = !!gl;
+    const hasWebGL2 = !!canvas.getContext('webgl2');
+
+    const hasLocalStorage = this.testLocalStorage();
+    const hasIndexedDB = 'indexedDB' in window;
+    const hasSessionStorage = this.testSessionStorage();
+
+    const hasOnlineStatus = 'onLine' in navigator;
+    const isOnline = navigator.onLine;
+    const connection =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
+    const connectionType = connection ? connection.effectiveType : 'unknown';
+
+    const hasPerformanceAPI = 'performance' in window;
+    const hasMemoryAPI = hasPerformanceAPI && 'memory' in performance;
+    const hasGamepadAPI = 'getGamepads' in navigator;
     const hasVibration = 'vibrate' in navigator;
 
-    // Detect orientation
-    const orientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+    const hasFullscreen = !!(
+      document.fullscreenEnabled ||
+      (document as any).webkitFullscreenEnabled ||
+      (document as any).mozFullScreenEnabled ||
+      (document as any).msFullscreenEnabled
+    );
 
-    return {
-      isMobile,
+    const hasPointerLock = !!(
+      document.exitPointerLock ||
+      (document as any).webkitExitPointerLock ||
+      (document as any).mozExitPointerLock
+    );
+
+    const hasBatteryAPI = 'getBattery' in navigator;
+
+    this.capabilities = {
       hasTouch,
+      hasAudioContext,
+      hasWebAudio,
+      hasWebGL,
+      hasWebGL2,
+      hasLocalStorage,
+      hasIndexedDB,
+      hasSessionStorage,
+      hasOnlineStatus,
+      isOnline,
+      connectionType,
+      hasPerformanceAPI,
+      hasMemoryAPI,
+      hasGamepadAPI,
       hasVibration,
-      screenOrientation: orientation,
-      pixelRatio: window.devicePixelRatio || 1,
+      hasFullscreen,
+      hasPointerLock,
+      hasBatteryAPI,
     };
+
+    console.log('🔧 Capabilities detected:', this.capabilities);
+    canvas.remove();
   }
 
-  private setupMobileOptimizations(): void {
-    if (!this.capabilities.isMobile) return;
+  private testLocalStorage(): boolean {
+    try {
+      const test = '__localStorage_test__';
+      localStorage.setItem(test, test);
+      localStorage.removeItem(test);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
-    // Prevent scrolling and bouncing on mobile
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.height = '100%';
+  private testSessionStorage(): boolean {
+    try {
+      const test = '__sessionStorage_test__';
+      sessionStorage.setItem(test, test);
+      sessionStorage.removeItem(test);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
-    // Prevent zoom on double tap
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', (event) => {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-      }
-      lastTouchEnd = now;
-    }, false);
+  public getDeviceInfo(): ExtendedDeviceInfo {
+    return this.deviceInfo!;
+  }
 
-    // Handle orientation changes
+  public getCapabilities(): DeviceCapabilities {
+    return this.capabilities!;
+  }
+
+  public isMobile(): boolean {
+    return this.deviceInfo?.isMobile || false;
+  }
+
+  public isTablet(): boolean {
+    return this.deviceInfo?.isTablet || false;
+  }
+
+  public isDesktop(): boolean {
+    return this.deviceInfo?.isDesktop || false;
+  }
+
+  public hasTouch(): boolean {
+    return this.capabilities?.hasTouch || false;
+  }
+
+  public hasWebGL(): boolean {
+    return this.capabilities?.hasWebGL || false;
+  }
+
+  public isOnline(): boolean {
+    return this.capabilities?.isOnline || false;
+  }
+
+  public getPlatform(): Platform {
+    return this.deviceInfo?.platform || Platform.UNKNOWN;
+  }
+
+  public isPortrait(): boolean {
+    return this.deviceInfo?.isPortrait || false;
+  }
+
+  public getConnectionType(): string {
+    return this.capabilities?.connectionType || 'unknown';
+  }
+
+  public initialize(): void {
+    this.setupOrientationListener();
+    this.setupNetworkListeners();
+    console.log('📱 PlatformManager initialized');
+  }
+
+  private setupOrientationListener(): void {
     window.addEventListener('orientationchange', () => {
       setTimeout(() => {
-        this.capabilities.screenOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
-        eventBus.emit('platform:orientationchange', this.capabilities.screenOrientation);
+        this.detectDevice();
+        eventBus.emit(EVENTS.UI_STATE_CHANGED, {
+          type: 'orientation',
+          isPortrait: this.isPortrait(),
+          timestamp: new Date(),
+        });
       }, 100);
     });
 
-    // Handle app state changes (for Capacitor)
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        eventBus.emit(GAME_EVENTS.GAME_PAUSE);
-      } else {
-        eventBus.emit(GAME_EVENTS.GAME_RESUME);
+    window.addEventListener('resize', () => {
+      const newIsPortrait = window.innerHeight > window.innerWidth;
+      if (newIsPortrait !== this.deviceInfo?.isPortrait) {
+        this.detectDevice();
+        eventBus.emit(EVENTS.UI_STATE_CHANGED, {
+          type: 'orientation',
+          isPortrait: newIsPortrait,
+          timestamp: new Date(),
+        });
       }
     });
-
-    // Memory management
-    if ('memory' in performance) {
-      setInterval(() => {
-        const memory = (performance as any).memory;
-        if (memory.usedJSHeapSize > 150 * 1024 * 1024) { // 150MB
-          eventBus.emit(GAME_EVENTS.PERFORMANCE_WARNING, {
-            type: 'HIGH_MEMORY_MOBILE',
-            value: memory.usedJSHeapSize / (1024 * 1024),
-            threshold: 150,
-          });
-        }
-      }, 5000);
-    }
-
-    console.log('Mobile optimizations enabled');
-  }
-}
-
-/**
- * Touch gesture detection for mobile controls
- */
-export class GestureDetector {
-  private startX = 0;
-  private startY = 0;
-  private endX = 0;
-  private endY = 0;
-  private minSwipeDistance = 50;
-
-  constructor(element: HTMLElement) {
-    this.setupGestureListeners(element);
   }
 
-  private setupGestureListeners(element: HTMLElement): void {
-    element.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      if (touch) {
-        this.startX = touch.clientX;
-        this.startY = touch.clientY;
+  private setupNetworkListeners(): void {
+    window.addEventListener('online', () => {
+      if (this.capabilities) {
+        this.capabilities.isOnline = true;
       }
-    }, { passive: true });
-
-    element.addEventListener('touchend', (e) => {
-      const touch = e.changedTouches[0];
-      if (touch) {
-        this.endX = touch.clientX;
-        this.endY = touch.clientY;
-        this.handleGesture();
-      }
-    }, { passive: true });
-  }
-
-  private handleGesture(): void {
-    const deltaX = this.endX - this.startX;
-    const deltaY = this.endY - this.startY;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-    if (distance < this.minSwipeDistance) {
-      eventBus.emit('gesture:tap', {
-        x: this.endX,
-        y: this.endY,
+      eventBus.emit(EVENTS.UI_STATE_CHANGED, {
+        type: 'network',
+        isOnline: true,
+        timestamp: new Date(),
       });
-      return;
-    }
+      console.log('🌐 Device is online');
+    });
 
-    const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      // Horizontal swipe
-      if (deltaX > 0) {
-        eventBus.emit('gesture:swipe', { direction: 'right', distance });
-      } else {
-        eventBus.emit('gesture:swipe', { direction: 'left', distance });
+    window.addEventListener('offline', () => {
+      if (this.capabilities) {
+        this.capabilities.isOnline = false;
       }
-    } else {
-      // Vertical swipe
-      if (deltaY > 0) {
-        eventBus.emit('gesture:swipe', { direction: 'down', distance });
-      } else {
-        eventBus.emit('gesture:swipe', { direction: 'up', distance });
-      }
-    }
+      eventBus.emit(EVENTS.UI_STATE_CHANGED, {
+        type: 'network',
+        isOnline: false,
+        timestamp: new Date(),
+      });
+      console.log('📡 Device is offline');
+    });
   }
 }
 
-/**
- * Performance optimizer for mobile devices
- */
-export class MobilePerformanceOptimizer {
-  private lowPerformanceMode = false;
-  private frameDropThreshold = 45; // FPS threshold for enabling low performance mode
-
-  constructor() {
-    this.startMonitoring();
-  }
-
-  private startMonitoring(): void {
-    let frameCount = 0;
-    let lastTime = performance.now();
-    const fpsHistory: number[] = [];
-
-    const measureFPS = () => {
-      frameCount++;
-      const currentTime = performance.now();
-
-      if (currentTime - lastTime >= 1000) {
-        const fps = frameCount;
-        frameCount = 0;
-        lastTime = currentTime;
-
-        fpsHistory.push(fps);
-        if (fpsHistory.length > 5) {
-          fpsHistory.shift();
-        }
-
-        const avgFPS = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
-
-        if (avgFPS < this.frameDropThreshold && !this.lowPerformanceMode) {
-          this.enableLowPerformanceMode();
-        } else if (avgFPS > this.frameDropThreshold + 10 && this.lowPerformanceMode) {
-          this.disableLowPerformanceMode();
-        }
-      }
-
-      requestAnimationFrame(measureFPS);
-    };
-
-    requestAnimationFrame(measureFPS);
-  }
-
-  private enableLowPerformanceMode(): void {
-    this.lowPerformanceMode = true;
-    
-    eventBus.emit('performance:low_mode_enabled');
-    console.log('Low performance mode enabled');
-    
-    // Emit settings that game systems can listen to
-    eventBus.emit('settings:update', {
-      particleCount: 25,
-      shadowQuality: 'off',
-      renderScale: 0.8,
-      physics: {
-        iterations: 2,
-        timeScale: 1,
-      },
-    });
-  }
-
-  private disableLowPerformanceMode(): void {
-    this.lowPerformanceMode = false;
-    
-    eventBus.emit('performance:low_mode_disabled');
-    console.log('Low performance mode disabled');
-    
-    eventBus.emit('settings:update', {
-      particleCount: 50,
-      shadowQuality: 'medium',
-      renderScale: 1,
-      physics: {
-        iterations: 4,
-        timeScale: 1,
-      },
-    });
-  }
-
-  isLowPerformanceMode(): boolean {
-    return this.lowPerformanceMode;
-  }
-}
-
-// Global platform manager instance
-export const platformManager = new PlatformManager();
+export const platformManager = PlatformManager.getInstance();
