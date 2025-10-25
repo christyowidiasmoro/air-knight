@@ -1,12 +1,12 @@
 # Build and Dependencies
-node_modules/
-dist/
+game/node_modules/
+game/dist/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+game/npm-debug.log*
+game/yarn-debug.log*
+game/yarn-error.log*
+game/pnpm-debug.log*
+game/lerna-debug.log*
 
 # Environment
 .env
@@ -35,14 +35,14 @@ Thumbs.db
 ehthumbs.db
 
 # Capacitor - Keep essential files, ignore generated content
-ios/
-android/.gradle/
-android/app/build/
-android/build/
-android/.idea/
-android/app/src/main/assets/public/
-android/capacitor-cordova-android-plugins/build/
-capacitor.config.ts
+game/ios/
+game/android/.gradle/
+game/android/app/build/
+game/android/build/
+game/android/.idea/
+game/android/app/src/main/assets/public/
+game/android/capacitor-cordova-android-plugins/build/
+game/capacitor.config.ts
 
 # Capacitor Plugins
 *.orig

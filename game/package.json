@@ -1,0 +1,66 @@
+{
+  "name": "air-knight",
+  "version": "1.0.0",
+  "description": "A modular TypeScript Phaser mobile game built with CapacitorJS",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:github-pages": "export VITE_BASE_PATH=/air-knight/ && npm run build",
+    "build:local": "export VITE_BASE_PATH=/ && npm run build",
+    "preview": "vite preview",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint src --ext ts,tsx --fix",
+    "type-check": "tsc --noEmit",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist/",
+    "mobile:build": "unset VITE_BASE_PATH && npm run build && npx cap sync",
+    "mobile:setup": "npx cap add android && npx cap add ios",
+    "mobile:ios": "npx cap open ios",
+    "mobile:android": "npx cap open android",
+    "mobile:serve": "npx cap run ios --livereload-url=http://localhost:5173",
+    "capacitor:sync": "npx cap sync",
+    "capacitor:update": "npx cap update",
+    "assets:generate": "node scripts/generate-placeholder-assets.js",
+    "assets:help": "node scripts/generate-placeholder-assets.js help"
+  },
+  "keywords": [
+    "phaser",
+    "typescript",
+    "mobile",
+    "game",
+    "capacitor"
+  ],
+  "author": "Air Knight Development Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.20",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "prettier": "^3.6.2",
+    "terser": "^5.44.0",
+    "ts-jest": "^29.4.4",
+    "typescript": "^5.9.3",
+    "vite": "^4.5.14"
+  },
+  "dependencies": {
+    "@capacitor/splash-screen": "^5.0.8",
+    "@capacitor/status-bar": "^5.0.8",
+    "canvas": "^3.2.0",
+    "phaser": "^3.90.0"
+  },
+  "optionalDependencies": {
+    "@capacitor/android": "^5.4.1",
+    "@capacitor/cli": "^5.7.8",
+    "@capacitor/core": "^5.7.8",
+    "@capacitor/ios": "^5.4.1"
+  }
+}

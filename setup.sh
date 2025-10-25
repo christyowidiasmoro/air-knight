@@ -20,6 +20,8 @@ fi
 
 echo "✅ Node.js $(node -v) detected"
 
+cd game
+
 # Install dependencies
 echo "📦 Installing dependencies..."
 npm install
