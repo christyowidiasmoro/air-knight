@@ -167,7 +167,7 @@ jobs:
             -e BUILD_TYPE \
             -e GRADLE_OPTS="${{ env.GRADLE_OPTS }}" \
             ${{ env.DOCKER_IMAGE }} \
-            bash scripts/android-build.sh
+            bash game/scripts/android-build.sh
             
           # Calculate build duration
           BUILD_END=$(date +%s)
