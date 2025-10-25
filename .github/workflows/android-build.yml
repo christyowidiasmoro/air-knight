@@ -151,6 +151,7 @@ jobs:
           BUILD_TYPE: ${{ steps.metadata.outputs.build-type }}
         run: |
           echo "🚀 Starting Android build in Docker container..."
+          cd game
           
           # Record build start time
           BUILD_START=$(date +%s)
@@ -167,7 +168,7 @@ jobs:
             -e BUILD_TYPE \
             -e GRADLE_OPTS="${{ env.GRADLE_OPTS }}" \
             ${{ env.DOCKER_IMAGE }} \
-            bash game/scripts/android-build.sh
+            bash scripts/android-build.sh
             
           # Calculate build duration
           BUILD_END=$(date +%s)
