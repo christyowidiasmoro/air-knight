@@ -53,7 +53,7 @@ RUN java -version && \
 RUN mkdir -p /workspace/build-output
 
 # Copy build scripts
-COPY --chown=circleci:circleci scripts/android-build.sh /workspace/scripts/
+COPY --chown=circleci:circleci game/scripts/android-build.sh /workspace/scripts/
 RUN chmod +x /workspace/scripts/android-build.sh
 
 # Default command
