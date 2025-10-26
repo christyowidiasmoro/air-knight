@@ -151,7 +151,6 @@ jobs:
           BUILD_TYPE: ${{ steps.metadata.outputs.build-type }}
         run: |
           echo "🚀 Starting Android build in Docker container..."
-          cd game
           
           # Record build start time
           BUILD_START=$(date +%s)
@@ -160,7 +159,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -v ${{ github.workspace }}/gradle-cache:/home/circleci/.gradle \
-            -w /workspace \
+            -w /workspace/game \
             -e ANDROID_SIGNING_KEY_BASE64 \
             -e ANDROID_KEYSTORE_PASSWORD \
             -e ANDROID_KEY_ALIAS \
