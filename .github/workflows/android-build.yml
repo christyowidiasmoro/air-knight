@@ -38,6 +38,9 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./game
     outputs:
       quality-passed: ${{ steps.quality-check.outputs.passed }}
     
@@ -50,6 +53,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: './game/package-lock.json'
           
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
@@ -117,7 +121,14 @@ jobs:
       - name: Build Docker image
         run: |
           echo "🐳 Building Android build environment..."
-          docker build -t ${{ env.DOCKER_IMAGE }} -f Dockerfile.android .
+          docker build -t ${{ env.DOCKER_IMAGE }} -f ./game/Dockerfile.android .
+          
+      - name: Prepare Node.js build in game directory
+        run: |
+          echo "📦 Preparing Node.js build in game directory..."
+          cd game
+          npm ci --prefer-offline --no-audit
+          npm run build
           
       - name: Prepare build environment
         run: |
@@ -148,7 +159,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -v ${{ github.workspace }}/gradle-cache:/home/circleci/.gradle \
-            -w /workspace \
+            -w /workspace/game \
             -e ANDROID_SIGNING_KEY_BASE64 \
             -e ANDROID_KEYSTORE_PASSWORD \
             -e ANDROID_KEY_ALIAS \
@@ -210,7 +221,7 @@ jobs:
             build-output/build-metadata.json
           retention-days: 30
           compression-level: 6
-          
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
       - name: Debug artifact info
         if: steps.build-check.outputs.apk-generated == 'true'
         run: |

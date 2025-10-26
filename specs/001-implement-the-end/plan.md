@@ -65,20 +65,21 @@ specs/[###-feature]/
 ```
 .github/
 ├── workflows/           # GitHub Actions workflow files
-│   ├── web-build.yml   # Web application build and deployment
-│   ├── quality.yml     # Code quality and testing
-│   └── release.yml     # Release automation (future)
+│   ├── web-build.yml    # Web application build and deployment
+│   ├── quality.yml      # Code quality and testing
+│   └── release.yml      # Release automation (future)
 └── templates/           # Issue and PR templates
 
-src/                     # Existing game source code (unchanged)
+game/src/                # Existing game source code (unchanged)
 ├── main.ts
+├── components/
 ├── core/
 ├── scenes/
 ├── systems/
-└── utils/
+└── tests/
 
 # Build outputs (generated)
-dist/                    # Web build artifacts
+game/dist/               # Web build artifacts
 docs/                    # Generated documentation
 ```
 

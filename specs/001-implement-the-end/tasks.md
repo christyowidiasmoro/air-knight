@@ -41,20 +41,20 @@
 ## Phase 2: Foundational (Prerequisites for All Stories)
 
 ### T004 Configure GitHub repository settings ✅
-**File**: Repository settings (via GitHub UI) + `.github/REPOSITORY_SETUP.md`  
+**File**: Repository settings (via GitHub UI) + `docs/github-repository-configuration-guide.md`
 **Story**: Foundation  
 **Description**: Enable GitHub Actions, configure repository permissions, set up environments  
 **Acceptance**: GitHub Actions enabled, environments configured, proper permissions set  
 **Note**: Manual configuration required - see REPOSITORY_SETUP.md for detailed steps
 
 ### T005 [P] Set up GitHub Pages configuration ✅
-**File**: Repository settings → Pages (documented in REPOSITORY_SETUP.md)  
+**File**: Repository settings → Pages (documented in github-repository-configuration-guide.md)
 **Story**: Foundation  
 **Description**: Configure GitHub Pages to use GitHub Actions as source  
 **Acceptance**: GitHub Pages configured with "GitHub Actions" as deployment source
 
 ### T006 [P] Create environment configurations ✅
-**File**: `.github/environments.md`  
+**File**: `docs/environments.md`
 **Story**: Foundation  
 **Description**: Create staging and production environments with appropriate protection rules  
 **Acceptance**: Both environments exist with proper protection rules and variables  
@@ -72,19 +72,19 @@
 **Acceptance**: QA workflow runs on all branches, enforces 80% coverage, zero lint errors, passes security scans
 
 ### T008 [P] Configure code coverage reporting ✅
-**File**: `.github/workflows/quality.yml` + `jest.config.js`  
+**File**: `.github/workflows/quality.yml` + `game/jest.config.js`
 **Story**: US4  
 **Description**: Set up code coverage collection and threshold validation in Jest  
 **Acceptance**: Coverage reports generated, 80% threshold enforced, failure blocks deployment
 
 ### T009 [P] Set up bundle size analysis ✅
-**File**: `package.json` + `.github/workflows/quality.yml`  
+**File**: `game/package.json` + `.github/workflows/quality.yml`
 **Story**: US4  
 **Description**: Add bundle analysis script and integrate into QA workflow  
 **Acceptance**: Bundle size monitored, performance budgets enforced, reports generated
 
 ### T010 [P] Configure security scanning ✅
-**File**: `.github/workflows/quality.yml`  
+**File**: `.github/workflows/quality.yml`
 **Story**: US4  
 **Description**: Add CodeQL analysis and npm audit to QA workflow  
 **Acceptance**: Security vulnerabilities detected, SAST analysis runs, results available
@@ -139,7 +139,7 @@
 **Independent Test**: Trigger Android build workflow that produces signed APK ready for distribution
 
 ### T017 Create Docker build image ✅
-**File**: `.github/workflows/android-build.yml` + `Dockerfile.android`  
+**File**: `.github/workflows/android-build.yml` + `game/Dockerfile.android`
 **Story**: US2  
 **Description**: Create Dockerfile for Android build environment with Capacitor support  
 **Acceptance**: Docker image contains Android SDK, Capacitor CLI, build tools

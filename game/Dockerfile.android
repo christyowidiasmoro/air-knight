@@ -1,0 +1,60 @@
+# Android Build Environment for Air Knight CI/CD
+# Based on official Android SDK image with Node.js support
+FROM cimg/android:2024.01.1-node
+
+# Set environment variables
+ENV ANDROID_HOME=/home/circleci/android-sdk
+ENV ANDROID_SDK_ROOT=$ANDROID_HOME
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# Set working directory
+WORKDIR /workspace
+
+# Install required system dependencies
+USER root
+RUN apt-get update && apt-get install -y \
+    gradle \
+    git \
+    unzip \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js dependencies globally (as root) - only basic tools needed
+# Note: Capacitor CLI will be used from local node_modules for version consistency
+
+# Switch back to circleci user
+USER circleci
+
+# Switch back to circleci user
+USER circleci
+
+# Accept Android SDK licenses
+RUN yes | sdkmanager --licenses || true
+
+# Install required Android SDK components
+RUN sdkmanager --update && \
+    sdkmanager \
+    "platform-tools" \
+    "platforms;android-34" \
+    "platforms;android-33" \
+    "build-tools;34.0.0" \
+    "build-tools;33.0.1" \
+    "extras;android;m2repository" \
+    "extras;google;m2repository"
+
+# Verify base installation (Capacitor will be verified after npm install in build script)
+RUN java -version && \
+    node --version && \
+    npm --version && \
+    gradle --version
+
+# Set up build directory structure
+RUN mkdir -p /workspace/build-output
+
+# Copy build scripts
+COPY --chown=circleci:circleci game/scripts/android-build.sh /workspace/scripts/
+RUN chmod +x /workspace/scripts/android-build.sh
+
+# Default command
+CMD ["bash"]
