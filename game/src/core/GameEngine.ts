@@ -6,6 +6,9 @@ import { SplashScene } from '../scenes/SplashScene';
 import { MainScene } from '../scenes/MainScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { HudScene } from '../scenes/HudScene';
+import { ExampleMenuScene } from '../scenes/ExampleMenuScene';
+import { UITestScene } from '../scenes/UITestScene';
+import { DataBoundDemoScene } from '../scenes/DataBoundDemoScene';
 
 /**
  * Core Game Engine class that configures and manages the Phaser game instance
@@ -127,6 +130,9 @@ export class GameEngine {
 
       // Scene configuration (will be populated by scene manager)
       scene: [
+        DataBoundDemoScene,
+        ExampleMenuScene,
+        UITestScene,
         Preloader,
         SplashScene,
         MainScene,

@@ -1,0 +1,1354 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* UI Overlay Base Styles */
+.ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Allow clicks to pass through to canvas */
+  z-index: 1000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Interactive elements should capture pointer events */
+.ui-interactive {
+  pointer-events: auto;
+}
+
+/* Non-interactive elements explicitly pass through events */
+.ui-non-interactive {
+  pointer-events: none;
+}
+
+/* Pointer event control utilities */
+@layer utilities {
+  .pointer-none {
+    pointer-events: none;
+  }
+  
+  .pointer-auto {
+    pointer-events: auto;
+  }
+  
+  .pointer-pass-through {
+    pointer-events: none;
+  }
+  
+  .pointer-capture {
+    pointer-events: auto;
+  }
+}
+
+/* Specific UI component pointer controls */
+.game-button {
+  pointer-events: auto; /* Buttons always capture events */
+}
+
+.game-panel {
+  pointer-events: auto; /* Panels capture events by default */
+}
+
+.game-panel.transparent {
+  pointer-events: none; /* Transparent panels pass through */
+}
+
+.game-panel.transparent .panel-content {
+  pointer-events: auto; /* But content inside can still be interactive */
+}
+
+.game-menu {
+  pointer-events: auto; /* Menus capture events */
+}
+
+.menu-item {
+  pointer-events: auto;
+}
+
+.menu-item.disabled {
+  pointer-events: none; /* Disabled items don't capture events */
+}
+
+.menu-separator {
+  pointer-events: none; /* Separators don't capture events */
+}
+
+/* HUD and overlay specific controls */
+.game-hud {
+  pointer-events: none; /* HUD text passes through by default */
+}
+
+.game-hud.interactive {
+  pointer-events: auto; /* But can be made interactive */
+}
+
+.game-progress-bar {
+  pointer-events: none; /* Progress bars pass through by default */
+}
+
+.game-progress-bar.interactive {
+  pointer-events: auto; /* Unless explicitly interactive */
+}
+
+/* Modal and dialog specific controls */
+.game-modal-backdrop {
+  pointer-events: auto; /* Backdrop captures events to prevent clicks behind */
+  cursor: default;
+}
+
+.game-modal {
+  pointer-events: auto; /* Modal content captures events */
+}
+
+.game-tooltip {
+  pointer-events: none; /* Tooltips never capture events */
+}
+
+/* Canvas interaction control */
+.canvas-interactive {
+  pointer-events: auto;
+}
+
+.canvas-blocked {
+  pointer-events: none;
+}
+
+/* Responsive pointer event adjustments */
+@media (max-width: 768px) {
+  /* On mobile, ensure touch targets are properly sized and accessible */
+  .ui-interactive {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  /* Increase touch target sizes for small interactive elements */
+  .game-button.small {
+    min-width: 48px;
+    min-height: 48px;
+  }
+}
+
+/* Game-specific pointer event patterns */
+.overlay-hud {
+  pointer-events: none; /* Game HUD doesn't interfere with gameplay */
+}
+
+.overlay-hud .interactive-element {
+  pointer-events: auto; /* Specific interactive elements within HUD */
+}
+
+.overlay-menu {
+  pointer-events: auto; /* Menus block game interaction */
+}
+
+.overlay-dialog {
+  pointer-events: auto; /* Dialogs block game interaction */
+}
+
+.overlay-notification {
+  pointer-events: none; /* Notifications don't block interaction */
+}
+
+.overlay-notification.dismissible {
+  pointer-events: auto; /* Unless they can be dismissed */
+}
+
+/* Component Base Classes */
+@layer components {
+  .game-button {
+    @apply bg-game-primary text-white px-4 py-2 rounded-lg ui-interactive 
+           hover:bg-blue-600 transition-colors duration-200 font-semibold
+           min-w-[44px] min-h-[44px] flex items-center justify-center;
+  }
+  
+  .game-button:disabled {
+    @apply bg-gray-400 cursor-not-allowed hover:bg-gray-400;
+  }
+  
+  .game-button-secondary {
+    @apply bg-game-secondary text-white hover:bg-slate-600;
+  }
+  
+  .game-button-accent {
+    @apply bg-game-accent text-white hover:bg-emerald-600;
+  }
+  
+  .game-button-danger {
+    @apply bg-game-danger text-white hover:bg-red-600;
+  }
+  
+  .game-panel {
+    @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 ui-interactive
+           border border-white/20;
+  }
+  
+  .game-panel-dark {
+    @apply bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-4 ui-interactive
+           border border-gray-600/20 text-white;
+  }
+  
+  .game-hud {
+    @apply text-white font-bold text-lg drop-shadow-lg;
+  }
+  
+  .game-hud-small {
+    @apply text-white font-semibold text-sm drop-shadow-md;
+  }
+  
+  .game-progress-bar {
+    @apply w-full h-2 bg-gray-800 rounded-full overflow-hidden;
+  }
+  
+  .game-progress-fill {
+    @apply h-full bg-game-primary transition-all duration-300 ease-out;
+  }
+  
+  .game-health-bar .game-progress-fill {
+    @apply bg-game-danger;
+  }
+  
+  .game-mana-bar .game-progress-fill {
+    @apply bg-blue-500;
+  }
+  
+  .game-experience-bar .game-progress-fill {
+    @apply bg-game-accent;
+  }
+  
+  .game-modal-backdrop {
+    @apply fixed inset-0 bg-black/50 ui-interactive z-50;
+  }
+  
+  .game-modal {
+    @apply fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
+           w-80 max-w-[90vw] z-50 game-panel;
+  }
+  
+  .game-tooltip {
+    @apply absolute bg-gray-900 text-white text-sm rounded-md px-2 py-1
+           shadow-lg z-50 pointer-events-none;
+  }
+}
+
+/* Responsive Layout Utilities */
+@layer utilities {
+  .ui-safe-area {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .ui-center {
+    @apply absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2;
+  }
+  
+  .ui-corner-tl {
+    @apply absolute top-4 left-4;
+  }
+  
+  .ui-corner-tr {
+    @apply absolute top-4 right-4;
+  }
+  
+  .ui-corner-bl {
+    @apply absolute bottom-4 left-4;
+  }
+  
+  .ui-corner-br {
+    @apply absolute bottom-4 right-4;
+  }
+  
+  .ui-edge-top {
+    @apply absolute top-4 left-1/2 transform -translate-x-1/2;
+  }
+  
+  .ui-edge-bottom {
+    @apply absolute bottom-4 left-1/2 transform -translate-x-1/2;
+  }
+  
+  .ui-edge-left {
+    @apply absolute left-4 top-1/2 transform -translate-y-1/2;
+  }
+  
+  .ui-edge-right {
+    @apply absolute right-4 top-1/2 transform -translate-y-1/2;
+  }
+  
+  /* Responsive Visibility Utilities */
+  .show-mobile { @apply xs:block mobile:block tablet:hidden desktop:hidden; }
+  .show-tablet { @apply xs:hidden mobile:hidden tablet:block desktop:hidden; }
+  .show-desktop { @apply xs:hidden mobile:hidden tablet:hidden desktop:block; }
+  
+  .hide-mobile { @apply xs:hidden mobile:hidden tablet:block desktop:block; }
+  .hide-tablet { @apply xs:block mobile:block tablet:hidden desktop:block; }
+  .hide-desktop { @apply xs:block mobile:block tablet:block desktop:hidden; }
+  
+  /* Responsive Sizing Utilities */
+  .ui-responsive-text {
+    @apply text-xs mobile:text-sm tablet:text-base desktop:text-lg;
+  }
+  
+  .ui-responsive-padding {
+    @apply p-2 mobile:p-3 tablet:p-4 desktop:p-6;
+  }
+  
+  .ui-responsive-margin {
+    @apply m-2 mobile:m-3 tablet:m-4 desktop:m-6;
+  }
+  
+  .ui-responsive-gap {
+    @apply gap-2 mobile:gap-3 tablet:gap-4 desktop:gap-6;
+  }
+  
+  /* Responsive Layout Utilities */
+  .ui-responsive-grid {
+    @apply grid grid-cols-1 mobile:grid-cols-2 tablet:grid-cols-3 desktop:grid-cols-4;
+  }
+  
+  .ui-responsive-flex {
+    @apply flex flex-col mobile:flex-row tablet:flex-row desktop:flex-row;
+  }
+  
+  /* Responsive Button Sizes */
+  .ui-button-responsive {
+    @apply w-full mobile:w-auto tablet:w-auto desktop:w-auto;
+    @apply text-sm mobile:text-base tablet:text-base desktop:text-lg;
+    @apply px-3 py-2 mobile:px-4 mobile:py-2 tablet:px-6 tablet:py-3 desktop:px-8 desktop:py-4;
+  }
+  
+  /* Responsive Container Widths */
+  .ui-container-responsive {
+    @apply w-full mobile:w-full tablet:w-4/5 desktop:w-3/5 wide:w-1/2;
+    @apply max-w-sm mobile:max-w-md tablet:max-w-lg desktop:max-w-xl wide:max-w-2xl;
+  }
+  
+  /* Orientation-specific Utilities */
+  .portrait-only { @apply block landscape:hidden; }
+  .landscape-only { @apply hidden landscape:block; }
+  
+  /* Touch Target Optimization */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px] mobile:min-w-[48px] mobile:min-h-[48px];
+  }
+  
+  /* Responsive Z-Index Management */
+  .ui-layer-background { @apply z-10; }
+  .ui-layer-content { @apply z-20; }
+  .ui-layer-navigation { @apply z-30; }
+  .ui-layer-overlay { @apply z-40; }
+  .ui-layer-modal { @apply z-50; }
+  .ui-layer-tooltip { @apply z-60; }
+  
+  /* Adaptive Layout for Game Elements */
+  .hud-responsive {
+    @apply 
+      /* Mobile: Compact HUD at bottom */
+      fixed bottom-0 left-0 right-0 h-16 mobile:h-20
+      /* Tablet: Side HUD */
+      tablet:top-0 tablet:right-0 tablet:bottom-auto tablet:left-auto tablet:w-64 tablet:h-auto
+      /* Desktop: Corner HUD */
+      desktop:w-80 desktop:h-auto;
+  }
+  
+  .menu-responsive {
+    @apply
+      /* Mobile: Full screen overlay */
+      fixed inset-0
+      /* Tablet: Centered modal */
+      tablet:relative tablet:inset-auto tablet:w-96 tablet:mx-auto tablet:my-8
+      /* Desktop: Larger modal */
+      desktop:w-[32rem];
+  }
+  
+  .panel-responsive {
+    @apply
+      /* Mobile: Full width with margins */
+      w-full mx-4
+      /* Tablet: Fixed width */
+      tablet:w-80 tablet:mx-auto
+      /* Desktop: Larger fixed width */
+      desktop:w-96;
+  }
+}
+
+/* Animation Utilities and Transitions */
+@layer utilities {
+  /* Basic fade animations */
+  .ui-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .ui-fade-out {
+    animation: fadeOut 0.3s ease-out;
+  }
+  
+  /* Slide animations */
+  .ui-slide-in-top {
+    animation: slideInTop 0.3s ease-out;
+  }
+  
+  .ui-slide-in-bottom {
+    animation: slideInBottom 0.3s ease-out;
+  }
+  
+  .ui-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+  
+  .ui-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+  
+  .ui-slide-out-top {
+    animation: slideOutTop 0.3s ease-in;
+  }
+  
+  .ui-slide-out-bottom {
+    animation: slideOutBottom 0.3s ease-in;
+  }
+  
+  .ui-slide-out-left {
+    animation: slideOutLeft 0.3s ease-in;
+  }
+  
+  .ui-slide-out-right {
+    animation: slideOutRight 0.3s ease-in;
+  }
+  
+  /* Scale animations */
+  .ui-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+  
+  .ui-scale-out {
+    animation: scaleOut 0.2s ease-in;
+  }
+  
+  .ui-scale-bounce {
+    animation: scaleBounce 0.4s ease-out;
+  }
+  
+  /* Bounce animations */
+  .ui-bounce-in {
+    animation: bounceIn 0.5s ease-out;
+  }
+  
+  .ui-bounce-out {
+    animation: bounceOut 0.3s ease-in;
+  }
+  
+  /* Shake animation for errors */
+  .ui-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+  
+  /* Pulse animation for attention */
+  .ui-pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  /* Flash animation for notifications */
+  .ui-flash {
+    animation: flash 0.6s ease-in-out;
+  }
+  
+  /* Rotation animations */
+  .ui-rotate-in {
+    animation: rotateIn 0.4s ease-out;
+  }
+  
+  .ui-rotate-out {
+    animation: rotateOut 0.4s ease-in;
+  }
+  
+  /* Flip animations */
+  .ui-flip-in-x {
+    animation: flipInX 0.5s ease-out;
+  }
+  
+  .ui-flip-in-y {
+    animation: flipInY 0.5s ease-out;
+  }
+  
+  /* Zoom animations */
+  .ui-zoom-in {
+    animation: zoomIn 0.3s ease-out;
+  }
+  
+  .ui-zoom-out {
+    animation: zoomOut 0.3s ease-in;
+  }
+  
+  /* Rolling counter animation */
+  .ui-counter-roll {
+    animation: counterRoll 0.6s ease-out;
+  }
+  
+  /* Progress bar animations */
+  .ui-progress-fill {
+    animation: progressFill 0.8s ease-out;
+  }
+  
+  /* Glow effect for important elements */
+  .ui-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  
+  /* Typewriter effect */
+  .ui-typewriter {
+    animation: typewriter 2s steps(40) 1s both;
+  }
+  
+  /* State transition classes */
+  .ui-state-entering {
+    @apply ui-fade-in ui-scale-in;
+  }
+  
+  .ui-state-exiting {
+    @apply ui-fade-out ui-scale-out;
+  }
+  
+  .ui-state-error {
+    @apply ui-shake;
+    @apply border-red-500 text-red-600;
+  }
+  
+  .ui-state-success {
+    @apply ui-flash;
+    @apply border-green-500 text-green-600;
+  }
+  
+  .ui-state-loading {
+    @apply ui-pulse;
+    @apply opacity-75;
+  }
+  
+  .ui-state-disabled {
+    @apply opacity-50 cursor-not-allowed;
+    transition: opacity 0.2s ease;
+  }
+  
+  /* Component-specific transition classes */
+  .ui-button-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  .ui-button-active {
+    @apply transition-all duration-100 ease-out;
+    transform: scale(0.95);
+  }
+  
+  .ui-panel-slide {
+    @apply transition-transform duration-300 ease-out;
+  }
+  
+  .ui-modal-backdrop {
+    @apply transition-opacity duration-300 ease-out;
+  }
+  
+  .ui-tooltip-appear {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  /* Health bar specific animations */
+  .ui-health-critical {
+    animation: healthCritical 1s ease-in-out infinite;
+  }
+  
+  .ui-health-drain {
+    animation: healthDrain 0.5s ease-out;
+  }
+  
+  .ui-health-heal {
+    animation: healthHeal 0.5s ease-out;
+  }
+  
+  /* Score and level up animations */
+  .ui-score-increase {
+    animation: scoreIncrease 0.8s ease-out;
+  }
+  
+  .ui-level-up {
+    animation: levelUp 1.2s ease-out;
+  }
+  
+  /* Notification animations */
+  .ui-notification-enter {
+    animation: notificationSlideIn 0.4s ease-out;
+  }
+  
+  .ui-notification-exit {
+    animation: notificationSlideOut 0.4s ease-in;
+  }
+  
+  /* Menu transition animations */
+  .ui-menu-enter {
+    animation: menuSlideDown 0.3s ease-out;
+  }
+  
+  .ui-menu-exit {
+    animation: menuSlideUp 0.3s ease-in;
+  }
+  
+  /* Game state transition animations */
+  .ui-game-over {
+    animation: gameOverFade 2s ease-out;
+  }
+  
+  .ui-game-start {
+    animation: gameStartZoom 1s ease-out;
+  }
+  
+  /* Performance optimized transitions */
+  .ui-fast-transition {
+    transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+  }
+  
+  .ui-smooth-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .ui-bounce-transition {
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .ui-fade-in,
+    .ui-fade-out,
+    .ui-slide-in-top,
+    .ui-slide-in-bottom,
+    .ui-slide-in-left,
+    .ui-slide-in-right,
+    .ui-slide-out-top,
+    .ui-slide-out-bottom,
+    .ui-slide-out-left,
+    .ui-slide-out-right,
+    .ui-scale-in,
+    .ui-scale-out,
+    .ui-scale-bounce,
+    .ui-bounce-in,
+    .ui-bounce-out,
+    .ui-rotate-in,
+    .ui-rotate-out,
+    .ui-flip-in-x,
+    .ui-flip-in-y,
+    .ui-zoom-in,
+    .ui-zoom-out {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+    
+    .ui-shake,
+    .ui-pulse,
+    .ui-flash,
+    .ui-glow {
+      animation: none;
+    }
+    
+    .ui-fast-transition,
+    .ui-smooth-transition,
+    .ui-bounce-transition {
+      transition: none;
+    }
+  }
+}
+
+/* Keyframe definitions */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideInTop {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInBottom {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from { 
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from { 
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutTop {
+  from { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to { 
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes slideOutBottom {
+  from { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes slideOutLeft {
+  from { 
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to { 
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes slideOutRight {
+  from { 
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to { 
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  to { 
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes scaleBounce {
+  0% { 
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% { 
+    transform: scale(0.97);
+  }
+  100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  20% {
+    transform: scale(1.1);
+  }
+  40% {
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  80% {
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounceOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  20% {
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes flash {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75% { opacity: 0.8; }
+}
+
+@keyframes rotateIn {
+  from {
+    opacity: 0;
+    transform: rotate(-180deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes rotateOut {
+  from {
+    opacity: 1;
+    transform: rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes flipInX {
+  from {
+    opacity: 0;
+    transform: perspective(400px) rotateX(90deg);
+  }
+  40% {
+    transform: perspective(400px) rotateX(-20deg);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(400px) rotateX(10deg);
+  }
+  80% {
+    transform: perspective(400px) rotateX(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(400px) rotateX(0deg);
+  }
+}
+
+@keyframes flipInY {
+  from {
+    opacity: 0;
+    transform: perspective(400px) rotateY(90deg);
+  }
+  40% {
+    transform: perspective(400px) rotateY(-20deg);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(400px) rotateY(10deg);
+  }
+  80% {
+    transform: perspective(400px) rotateY(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(400px) rotateY(0deg);
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale3d(0.3, 0.3, 0.3);
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes zoomOut {
+  from {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+  50% {
+    opacity: 0;
+    transform: scale3d(0.3, 0.3, 0.3);
+  }
+  to {
+    opacity: 0;
+    transform: scale3d(0.3, 0.3, 0.3);
+  }
+}
+
+@keyframes counterRoll {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: var(--progress-width, 100%); }
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.6);
+  }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Game-specific animations */
+@keyframes healthCritical {
+  0%, 100% { 
+    background-color: rgb(239, 68, 68);
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% { 
+    background-color: rgb(220, 38, 38);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
+  }
+}
+
+@keyframes healthDrain {
+  0% { background-color: rgb(239, 68, 68); }
+  50% { background-color: rgb(185, 28, 28); }
+  100% { background-color: rgb(239, 68, 68); }
+}
+
+@keyframes healthHeal {
+  0% { 
+    background-color: rgb(34, 197, 94);
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+  }
+  50% { 
+    background-color: rgb(21, 128, 61);
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.8);
+  }
+  100% { 
+    background-color: rgb(34, 197, 94);
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes scoreIncrease {
+  0% { 
+    transform: scale(1);
+    color: inherit;
+  }
+  50% { 
+    transform: scale(1.2);
+    color: rgb(34, 197, 94);
+  }
+  100% { 
+    transform: scale(1);
+    color: inherit;
+  }
+}
+
+@keyframes levelUp {
+  0% { 
+    transform: scale(1) rotate(0deg);
+    color: inherit;
+    text-shadow: none;
+  }
+  25% { 
+    transform: scale(1.3) rotate(-5deg);
+    color: rgb(251, 191, 36);
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+  }
+  50% { 
+    transform: scale(1.2) rotate(5deg);
+    color: rgb(251, 191, 36);
+    text-shadow: 0 0 15px rgba(251, 191, 36, 1);
+  }
+  75% { 
+    transform: scale(1.1) rotate(-2deg);
+    color: rgb(251, 191, 36);
+  }
+  100% { 
+    transform: scale(1) rotate(0deg);
+    color: inherit;
+    text-shadow: none;
+  }
+}
+
+@keyframes notificationSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes notificationSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes menuSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes menuSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes gameOverFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gameStartZoom {
+  0% {
+    opacity: 0;
+    transform: scale(2);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+  /* High DPI Display Optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .game-hud,
+  .game-hud-small {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* DataBound Demo Specific Styles */
+.demo-text-display {
+  @apply bg-blue-50 border border-blue-200 rounded p-2 text-blue-800 font-medium;
+}
+
+.demo-health-display {
+  @apply bg-white border border-gray-200 rounded p-2 font-medium;
+}
+
+.demo-score-display {
+  @apply bg-green-50 border border-green-200 rounded p-2 text-green-800 font-bold;
+}
+
+.demo-level-display {
+  @apply bg-purple-50 border border-purple-200 rounded p-2 text-purple-800 font-semibold;
+}
+
+.demo-progress-bar {
+  @apply bg-gray-200 rounded-full h-3 overflow-hidden border;
+}
+
+.demo-progress-bar::after {
+  content: '';
+  @apply block h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-300;
+}
+
+.demo-change-log {
+  @apply bg-gray-900 text-green-400 border border-gray-700 rounded p-2 font-mono text-xs;
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4a5568 #1a202c;
+}
+
+.demo-change-log::-webkit-scrollbar {
+  width: 6px;
+}
+
+.demo-change-log::-webkit-scrollbar-track {
+  @apply bg-gray-800;
+}
+
+.demo-change-log::-webkit-scrollbar-thumb {
+  @apply bg-gray-600 rounded;
+}
+
+.demo-counter {
+  @apply bg-indigo-50 border border-indigo-200 rounded p-2 text-indigo-800 font-bold text-center;
+}
+
+.demo-time-display {
+  @apply bg-yellow-50 border border-yellow-200 rounded p-2 text-yellow-800 font-mono;
+}
+
+.demo-currency-display {
+  @apply bg-green-50 border border-green-200 rounded p-2 text-green-800 font-bold;
+}
+
+.demo-percent-display {
+  @apply bg-red-50 border border-red-200 rounded p-2 text-red-800 font-medium;
+}
+
+.demo-text-transform {
+  @apply bg-blue-50 border border-blue-200 rounded p-2 text-blue-800 font-medium;
+}
+
+.demo-wave-display {
+  @apply border border-gray-200 rounded p-2 text-white font-bold text-center transition-all duration-300;
+}
+
+.demo-validation-status {
+  @apply bg-amber-50 border border-amber-200 rounded p-2 text-amber-800 text-xs;
+}
+
+.demo-achievement {
+  @apply bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded p-2 text-gray-800;
+}
+
+.demo-notifications-list {
+  @apply bg-gray-800 rounded border border-gray-600 p-2 text-white;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4a5568 #2d3748;
+}
+
+.demo-notifications-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.demo-notifications-list::-webkit-scrollbar-track {
+  @apply bg-gray-700;
+}
+
+.demo-notifications-list::-webkit-scrollbar-thumb {
+  @apply bg-gray-500 rounded;
+}
+
+.demo-inventory-list {
+  @apply bg-gray-800 rounded border border-gray-600 p-2 text-white;
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4a5568 #2d3748;
+}
+
+.demo-inventory-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.demo-inventory-list::-webkit-scrollbar-track {
+  @apply bg-gray-700;
+}
+
+.demo-inventory-list::-webkit-scrollbar-thumb {
+  @apply bg-gray-500 rounded;
+}
+
+.demo-array-stats {
+  @apply bg-blue-800 text-blue-100 rounded p-2 text-xs font-mono;
+}
+
+/* DataBound component input styling */
+.demo-text-display input,
+.demo-text-display select,
+.demo-text-display input[type="range"] {
+  @apply w-full px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none;
+}
+
+.demo-text-display input[type="range"] {
+  @apply appearance-none bg-gray-200 h-2 rounded-lg;
+}
+
+.demo-text-display input[type="range"]::-webkit-slider-thumb {
+  @apply appearance-none w-4 h-4 bg-blue-500 rounded-full cursor-pointer;
+}
+
+.demo-text-display input[type="range"]::-moz-range-thumb {
+  @apply w-4 h-4 bg-blue-500 rounded-full cursor-pointer border-0;
+}
+
+/* Interactive controls panel styling */
+.controls-panel .game-button {
+  @apply transition-all duration-200 hover:scale-105 active:scale-95;
+}
+
+/* Visual feedback for data changes */
+.data-change-highlight {
+  animation: dataChangeFlash 0.6s ease-out;
+}
+
+@keyframes dataChangeFlash {
+  0% { 
+    background-color: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
+  50% { 
+    background-color: rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4);
+  }
+  100% { 
+    background-color: transparent;
+    box-shadow: 0 0 0 0px rgba(59, 130, 246, 0);
+  }
+}
+
+/* Property watching visual indicators */
+.property-watched {
+  position: relative;
+}
+
+.property-watched::before {
+  content: '👁';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Validation error styling */
+.validation-error {
+  @apply border-red-500 bg-red-50;
+  animation: validationShake 0.4s ease-in-out;
+}
+
+@keyframes validationShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Two-way binding visual indicator */
+.two-way-bound {
+  position: relative;
+}
+
+.two-way-bound::after {
+  content: '⇄';
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  font-size: 10px;
+  color: #059669;
+  font-weight: bold;
+}
+
+/* Transformer applied indicator */
+.transformer-applied {
+  position: relative;
+}
+
+.transformer-applied::before {
+  content: '🔄';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  font-size: 10px;
+  opacity: 0.7;
+}

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GameEngine } from './core/GameEngine';
 import { PlatformManager } from './systems/PlatformManager';
+// Import global styles for UI overlay system
+import './styles/globals.css';
 
 /**
  * Main entry point for Air Knight game

@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: HTML UI Integration API
+  description: TypeScript interfaces and contracts for HTML UI overlay system
+  version: 1.0.0
+  
+components:
+  schemas:
+    UIPosition:
+      type: object
+      properties:
+        x:
+          type: number
+          description: X coordinate (pixels or percentage)
+        y:
+          type: number
+          description: Y coordinate (pixels or percentage)
+        anchor:
+          type: string
+          enum: [px, '%']
+          description: Position unit type
+        origin:
+          type: string
+          enum: [top-left, center, bottom-right]
+          description: Reference point for positioning
+      required: [x, y, anchor, origin]
+    
+    UISize:
+      type: object
+      properties:
+        width:
+          type: number
+          minimum: 0
+          description: Width in pixels
+        height:
+          type: number
+          minimum: 0
+          description: Height in pixels
+      required: [width, height]
+    
+    UIComponent:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: '^[a-zA-Z0-9-_]+$'
+          description: Unique component identifier
+        element:
+          type: object
+          description: HTMLElement reference (runtime only)
+        isVisible:
+          type: boolean
+          default: true
+          description: Component visibility state
+        isInteractive:
+          type: boolean
+          default: true
+          description: Whether component accepts input
+        position:
+          $ref: '#/components/schemas/UIPosition'
+        size:
+          $ref: '#/components/schemas/UISize'
+        className:
+          type: string
+          description: CSS classes to apply to element
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+          description: HTML attributes to set on element
+      required: [id, position, size]
+    
+    UIOverlayContainer:
+      type: object
+      properties:
+        element:
+          type: object
+          description: HTMLDivElement reference (runtime only)
+        isVisible:
+          type: boolean
+          default: true
+          description: Overall overlay visibility
+        zIndex:
+          type: integer
+          minimum: 1000
+          default: 1000
+          description: Z-index value for canvas layering
+        components:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/UIComponent'
+          description: Map of registered UI components
+      required: [zIndex]
+    
+    GameUIBridge:
+      type: object
+      properties:
+        gameState:
+          type: object
+          description: Reference to current game state
+        uiContainer:
+          $ref: '#/components/schemas/UIOverlayContainer'
+        eventSubscriptions:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: object
+          description: Event listener mappings
+        updateQueue:
+          type: array
+          items:
+            $ref: '#/components/schemas/UIUpdate'
+          maxItems: 100
+          description: Pending UI updates
+    
+    UIUpdate:
+      type: object
+      properties:
+        componentId:
+          type: string
+          description: Target component ID
+        property:
+          type: string
+          description: Property to update
+        value:
+          description: New value (any type)
+        timestamp:
+          type: number
+          description: Update timestamp in milliseconds
+      required: [componentId, property, value, timestamp]
+    
+    UIBreakpoint:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Breakpoint identifier
+        minWidth:
+          type: number
+          minimum: 0
+          description: Minimum width threshold
+        maxWidth:
+          type: number
+          minimum: 0
+          description: Maximum width threshold (optional)
+      required: [name, minWidth]
+    
+    InputHandlerConfig:
+      type: object
+      properties:
+        canvas:
+          type: object
+          description: HTMLCanvasElement reference
+        uiContainer:
+          $ref: '#/components/schemas/UIOverlayContainer'
+        preventCanvasInteraction:
+          type: boolean
+          default: false
+          description: Whether to block canvas interactions when UI is active
+        touchMinSize:
+          type: number
+          minimum: 44
+          default: 44
+          description: Minimum touch target size in pixels
+      required: [canvas, uiContainer]
+    
+    LayoutManagerConfig:
+      type: object
+      properties:
+        canvasSize:
+          $ref: '#/components/schemas/UISize'
+        viewportSize:
+          $ref: '#/components/schemas/UISize'
+        scaleFactor:
+          type: number
+          minimum: 0.1
+          maximum: 5.0
+          default: 1.0
+          description: Scale ratio for responsive design
+        breakpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/UIBreakpoint'
+          description: Responsive design breakpoints
+      required: [canvasSize, viewportSize, breakpoints]
+
+paths:
+  # This is a component API specification, not a REST API
+  # Paths represent method signatures for TypeScript interfaces
+  
+  /UIOverlayContainer/addComponent:
+    post:
+      summary: Add UI component to overlay
+      operationId: addComponent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UIComponent'
+      responses:
+        '200':
+          description: Component added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  componentId:
+                    type: string
+        '400':
+          description: Invalid component configuration
+        '409':
+          description: Component ID already exists
+  
+  /UIOverlayContainer/removeComponent:
+    delete:
+      summary: Remove UI component from overlay
+      operationId: removeComponent
+      parameters:
+        - name: componentId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Component removed successfully
+        '404':
+          description: Component not found
+  
+  /UIOverlayContainer/updateComponent:
+    patch:
+      summary: Update existing UI component
+      operationId: updateComponent
+      parameters:
+        - name: componentId
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                property:
+                  type: string
+                value:
+                  description: New value for the property
+      responses:
+        '200':
+          description: Component updated successfully
+        '404':
+          description: Component not found
+        '400':
+          description: Invalid property or value
+  
+  /GameUIBridge/subscribeToGameEvent:
+    post:
+      summary: Subscribe UI component to game state changes
+      operationId: subscribeToGameEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                eventName:
+                  type: string
+                  description: Game event to listen for
+                componentId:
+                  type: string
+                  description: UI component that should respond
+                updateProperty:
+                  type: string
+                  description: Component property to update
+                transformer:
+                  type: string
+                  description: Optional data transformation function name
+              required: [eventName, componentId, updateProperty]
+      responses:
+        '200':
+          description: Subscription created successfully
+        '400':
+          description: Invalid subscription parameters
+  
+  /InputHandler/setEventRouting:
+    post:
+      summary: Configure event routing between UI and canvas
+      operationId: setEventRouting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                eventType:
+                  type: string
+                  enum: [click, touch, keyboard, hover]
+                target:
+                  type: string
+                  enum: [ui, canvas, both]
+                priority:
+                  type: string
+                  enum: [ui-first, canvas-first]
+              required: [eventType, target]
+      responses:
+        '200':
+          description: Event routing configured successfully
+        '400':
+          description: Invalid routing configuration
+  
+  /LayoutManager/updateLayout:
+    post:
+      summary: Trigger responsive layout update
+      operationId: updateLayout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                canvasSize:
+                  $ref: '#/components/schemas/UISize'
+                viewportSize:
+                  $ref: '#/components/schemas/UISize'
+                orientation:
+                  type: string
+                  enum: [portrait, landscape]
+              required: [canvasSize, viewportSize]
+      responses:
+        '200':
+          description: Layout updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updatedComponents:
+                    type: array
+                    items:
+                      type: string
+                    description: List of component IDs that were repositioned
+                  newBreakpoint:
+                    type: string
+                    description: Current active breakpoint name
+        '400':
+          description: Invalid layout parameters
