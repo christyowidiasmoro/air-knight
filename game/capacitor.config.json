@@ -22,7 +22,7 @@
       "resize": "none"
     },
     "Device": {
-      "orientation": "landscape"
+      "orientation": "portrait"
     }
   },
   "ios": {

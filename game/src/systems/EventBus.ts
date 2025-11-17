@@ -4,6 +4,44 @@
 
 export type EventHandler<T = any> = (data: T) => void;
 
+// UI Event Data Types
+export interface UIComponentEventData {
+  componentId: string;
+  element?: HTMLElement;
+}
+
+export interface UIVisibilityChangeData extends UIComponentEventData {
+  isVisible: boolean;
+}
+
+export interface UIInteractionChangeData extends UIComponentEventData {
+  isInteractive: boolean;
+}
+
+export interface UIFocusChangeData {
+  previousElement?: HTMLElement;
+  currentElement?: HTMLElement;
+  componentId?: string;
+}
+
+export interface UILayoutUpdateData {
+  canvasSize: { width: number; height: number };
+  viewportSize: { width: number; height: number };
+  scaleFactor: number;
+  updatedComponentIds: string[];
+}
+
+export interface UIBreakpointChangeData {
+  previousBreakpoint: string;
+  currentBreakpoint: string;
+  viewportSize: { width: number; height: number };
+}
+
+export interface UIOrientationChangeData {
+  orientation: 'portrait' | 'landscape';
+  viewportSize: { width: number; height: number };
+}
+
 export class EventBus {
   private static instance: EventBus;
   private events: Map<string, Set<EventHandler>> = new Map();
@@ -98,6 +136,16 @@ export const GameEvents = {
   // UI events
   UI_MODAL_OPEN: 'ui:modal:open',
   UI_MODAL_CLOSE: 'ui:modal:close',
+  UI_COMPONENT_MOUNTED: 'ui:component:mounted',
+  UI_COMPONENT_UNMOUNTED: 'ui:component:unmounted',
+  UI_COMPONENT_VISIBILITY_CHANGED: 'ui:component:visibility:changed',
+  UI_COMPONENT_INTERACTION_CHANGED: 'ui:component:interaction:changed',
+  UI_OVERLAY_SHOWN: 'ui:overlay:shown',
+  UI_OVERLAY_HIDDEN: 'ui:overlay:hidden',
+  UI_FOCUS_CHANGED: 'ui:focus:changed',
+  UI_LAYOUT_UPDATED: 'ui:layout:updated',
+  UI_BREAKPOINT_CHANGED: 'ui:breakpoint:changed',
+  UI_ORIENTATION_CHANGED: 'ui:orientation:changed',
   
   // Network events
   NETWORK_CONNECTED: 'network:connected',
